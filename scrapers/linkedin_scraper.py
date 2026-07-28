@@ -1,6 +1,5 @@
 """
 Módulo: scrapers/linkedin_scraper.py (Migrado a Playwright)
-============================================================================
 """
 import time
 import urllib.parse
@@ -41,7 +40,7 @@ class LinkedInScraper(BaseScraper):
         try:
             while len(ofertas_recopiladas) < limite_ofertas and paginas_revisadas < max_paginas:
                 url_busqueda = f"https://www.linkedin.com/jobs/search/?keywords={puesto_url}&location={lugar_url}&start={offset}"
-                logger.info(f" LinkedIn (Pág {paginas_revisadas + 1}): {url_busqueda}")
+                logger.info(f"🔍 LinkedIn (Pág {paginas_revisadas + 1}): {url_busqueda}")
                 
                 self.navegar_a(url_busqueda)
                 time.sleep(3)
@@ -74,14 +73,14 @@ class LinkedInScraper(BaseScraper):
                         except:
                             continue
                         
+                        # ✅ FIX: Completar URL si es relativa
+                        if href and not href.startswith("http"):
+                            href = f"https://www.linkedin.com{href}"
+                        
                         if not href or "job" not in href.lower():
                             continue
-                        
-                        # Verificar duplicados
                         if any(o['link_oferta'] == href for o in ofertas_recopiladas):
                             continue
-                        
-                        # Filtro de relevancia
                         if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
                             continue
                         
@@ -102,12 +101,12 @@ class LinkedInScraper(BaseScraper):
                         except:
                             pass
                         
-                        # Extraer texto
+                        # ✅ FIX: Extraer solo el contenedor principal
                         try:
                             cuerpo = self.page.locator("main, section.core-rail").first
-                            texto_crudo = cuerpo.inner_text()
+                            texto_crudo = cuerpo.inner_text()[:2000]
                         except:
-                            texto_crudo = self.obtener_texto_pagina()
+                            texto_crudo = self.obtener_texto_pagina()[:2000]
                         
                         if texto_crudo and len(texto_crudo) > 100:
                             ofertas_recopiladas.append({
