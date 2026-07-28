@@ -1,6 +1,7 @@
 """
 Módulo: scrapers/bumeran_scraper.py (URLs corregidas con patrón /en-lugar/)
 """
+import re
 import time
 from scrapers.base_scraper import BaseScraper
 from loguru import logger
@@ -23,8 +24,8 @@ class BumeranScraper(BaseScraper):
             pass
 
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
-                          puesto: str = "analista de datos", lugar: str = "lima", 
-                          filtro_relevancia_cb=None) -> list:
+                           puesto: str = "analista de datos", lugar: str = "lima", 
+                           filtro_relevancia_cb=None) -> list:
         """Recolecta ofertas de Bumeran con URLs correctas."""
         if not self.page:
             self.iniciar_navegador(headless=True)
@@ -88,10 +89,14 @@ class BumeranScraper(BaseScraper):
                         
                         titulo = lineas[0]
                         
-                        # Verificar duplicados y filtro
+                        # 1. Verificar duplicados
                         if any(o['link_oferta'] == href for o in ofertas_recopiladas):
+                            logger.debug(f"⏭️ Descartado (Duplicado): {titulo[:30]}")
                             continue
+                            
+                        # 2. Filtro de relevancia
                         if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
+                            logger.debug(f"⏭️ Descartado (No relevante): '{titulo}' vs '{puesto}'")
                             continue
                         
                         # Abrir oferta en nueva pestaña
@@ -107,9 +112,12 @@ class BumeranScraper(BaseScraper):
                         try:
                             cuerpo = self.page.locator("main, section, div.job-description").first
                             texto_crudo = cuerpo.inner_text()
-                        except:
+                        except Exception:
                             texto_crudo = self.page.inner_text("body")
                         
+                        texto_crudo = re.sub(r'\n\s*\n', '\n', texto_crudo).strip()
+                        
+                        # 3. Validar longitud del texto
                         if texto_crudo and len(texto_crudo) > 150:
                             ofertas_recopiladas.append({
                                 "link_oferta": href,
@@ -117,7 +125,9 @@ class BumeranScraper(BaseScraper):
                                 "texto_crudo": texto_crudo[:2000],
                                 "titulo_puesto": titulo
                             })
-                            logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:35]}...")
+                            logger.info(f"✅ [{len(ofertas_recopiladas)}] Guardada: {titulo[:35]}...")
+                        else:
+                            logger.warning(f"⚠️ Descartado (Texto muy corto < 150 chars, posible bloqueo CAPTCHA): {titulo[:30]}")
                         
                         # Cerrar y volver
                         self.page.close()
