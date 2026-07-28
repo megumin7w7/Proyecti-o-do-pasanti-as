@@ -3,12 +3,12 @@ name: Pipeline de Scraping Laboral AI
 on:
   workflow_dispatch: # Permite ejecutarlo manualmente con un botón desde la pestaña Actions
   schedule:
-    - cron: '0 18 * * *' # Ejemplo: todos los días a las 18:00 UTC (1:00 PM hora Perú)
+    - cron: '0 18 * * *' # Todos los días a las 18:00 UTC (1:00 PM hora Perú)
 
 jobs:
   scrape-jobs:
-    runs-on: ubuntu-latest # Máquina virtual Linux limpia y gratuita
-    
+    runs-on: ubuntu-latest # Máquina virtual Linux limpia
+
     steps:
       - name: 📥 Descargar el código del repositorio
         uses: actions/checkout@v4
@@ -33,15 +33,15 @@ jobs:
         env:
           # Inyecta tu credencial de Google de forma 100% segura desde los Secrets
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          # Muestra los logs en vivo en la consola de GitHub Actions sin retrasos de buffering
+          PYTHONUNBUFFERED: "1"
         run: python main.py
 
-      # 🕵️ PASO DE DIAGNÓSTICO: Guarda capturas si Bumeran falla o se bloquea
+      # 🕵️ PASO DE DIAGNÓSTICO: Guarda cualquier captura realizada durante el proceso
       - name: 📸 Guardar evidencia de fallos (Debug)
-        if: always() # Se ejecuta siempre, incluso si el paso anterior falló
+        if: always() # Se ejecuta siempre, falle o no el script
         uses: actions/upload-artifact@v4
         with:
           name: bumeran-debug-screenshots
-          path: |
-            bumeran_bloqueo.png
-            bumeran_vacia.png
-          if-no-files-found: ignore # No falla si no se generaron imágenes
+          path: "*.png" # 👈 Captura cualquier imagen PNG guardada en la raíz
+          if-no-files-found: warn # Te notificará suavemente si no se generó ninguna captura
