@@ -1,10 +1,11 @@
 """
-Módulo: main.py (Orquestador con los 4 scrapers activos y compresión de datos)
+Módulo: main.py (Orquestador con Config_Busquedas, Indeed desactivado, sin campo nivel)
 """
 import sys
 import os
 import time
 import hashlib
+import json
 from datetime import datetime
 from typing import List, Dict, Optional
 from loguru import logger
@@ -17,7 +18,7 @@ from storage.sheets_handler import SheetsHandler, SheetsHandlerSimulado
 from scrapers.computrabajo_scraper import ComputrabajoScraper
 from scrapers.linkedin_scraper import LinkedInScraper
 from scrapers.bumeran_scraper import BumeranScraper
-from scrapers.indeed_scraper import IndeedScraperPlaywright
+# from scrapers.indeed_scraper import IndeedScraperPlaywright  # ❌ DESACTIVADO TEMPORALMENTE
 
 def es_titulo_relevante(titulo: str, puesto_buscado: str) -> bool:
     titulo_lower = titulo.lower().strip()
@@ -30,7 +31,7 @@ def es_titulo_relevante(titulo: str, puesto_buscado: str) -> bool:
 def validar_contenido_semantico(oferta: dict, puesto: str) -> bool:
     DICCIONARIO_AREAS = {
         "marketing": ["marketing", "branding", "digital", "seo", "sem", "growth", "comunicaciones", "publicidad", "social media", "community manager"],
-        "datos": ["data", "datos", "analytics", "analista de datos", "bi", "business intelligence", "sql", "power bi", "powerbi", "python", "excel", "dashboard", "tableau"]
+        "datos": ["data", "datos", "analytics", "analista de datos", "bi", "business intelligence", "sql", "power bi", "python", "excel", "dashboard", "tableau"]
     }
     texto = oferta.get("texto_crudo", "").lower()
     titulo = oferta.get("titulo_puesto", "").lower()
@@ -62,11 +63,11 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
         # ✅ COMPRESIÓN DE DATOS PARA EXCEL
         reqs_raw = datos_extraidos.get("requisitos", [])
         reqs_text = [r.get("texto", "") for r in reqs_raw if r.get("texto")]
-        requisitos_comprimidos = "; ".join(reqs_text[:8])  # Máx 8 requisitos
+        requisitos_comprimidos = "; ".join(reqs_text[:8])
         
         bens_raw = datos_extraidos.get("beneficios", "")
         bens_list = [b.strip("• \n\r") for b in bens_raw.split("\n") if b.strip() and len(b.strip()) > 5]
-        beneficios_comprimidos = "; ".join(bens_list[:5])  # Máx 5 beneficios
+        beneficios_comprimidos = "; ".join(bens_list[:5])
         
         return {
             "id_oferta": f"{nombre_plataforma[:3].upper()}-{id_unico}",
@@ -77,11 +78,11 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
             "empresa": datos_extraidos.get("empresa", "No especificada"),
             "modalidad": datos_extraidos.get("modalidad", "Presencial"),
             "disponible_hasta": "-",
-            "nivel": datos_extraidos.get("nivel", "Practicante"),
+            # ❌ ELIMINADO: "nivel": datos_extraidos.get("nivel", "Practicante"),
             "horario": datos_extraidos.get("horario", "Tiempo Completo"),
             "departamento": lugar.capitalize(),
             "area_categoria": categoria_hoja,
-            "descripcion_breve": texto_limpio[:500],  # ✅ LIMITADO A 500 CARACTERES
+            "descripcion_breve": texto_limpio[:2000],  # ✅ AUMENTADO A 2000 CARACTERES
             "requisitos": requisitos_comprimidos if requisitos_comprimidos else "No especificados",
             "beneficios": beneficios_comprimidos if beneficios_comprimidos else "No especificados"
         }
@@ -90,7 +91,7 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
         return None
 
 def ejecutar_scraper(scraper, nombre: str, puesto: str, lugar: str, limite_ofertas: int, es_playwright: bool = False) -> List[Dict]:
-    logger.info(f"\n📌 RASTREANDO: {nombre}")
+    logger.info(f"\n RASTREANDO: {nombre}")
     logger.info("-" * 50)
     try:
         if es_playwright:
@@ -114,13 +115,13 @@ def ejecutar_scraper(scraper, nombre: str, puesto: str, lugar: str, limite_ofert
         except:
             pass
 
-def ejecutar_pipeline(puesto: str = "practicante de datos", lugar: str = "lima", limite_ofertas: int = 15, 
+def ejecutar_pipeline(puesto: str = None, lugar: str = None, limite_ofertas: int = 15, 
                      usar_bumeran: bool = True, usar_computrabajo: bool = True, 
-                     usar_linkedin: bool = True, usar_indeed: bool = True, 
+                     usar_linkedin: bool = True, usar_indeed: bool = False,  # ❌ INDEED DESACTIVADO
                      usar_nlp: bool = True, progress_callback=None) -> Dict:
     logger.info("=" * 60)
-    logger.info("🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI")
-    logger.info(f"📅 Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(" INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI")
+    logger.info(f" Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info("=" * 60)
     
     start_time = time.time()
@@ -132,6 +133,18 @@ def ejecutar_pipeline(puesto: str = "practicante de datos", lugar: str = "lima",
     except:
         storage = SheetsHandlerSimulado()
     
+    # ✅ LEER CONFIGURACIÓN DESDE GOOGLE SHEETS
+    if puesto is None or lugar is None:
+        logger.info("📋 Leyendo configuración desde Config_Busquedas...")
+        busquedas_activas = storage.obtener_busquedas_activas()
+        if not busquedas_activas:
+            logger.error("❌ No hay búsquedas activas en Config_Busquedas")
+            return {'success': False, 'error': 'No hay búsquedas activas', 'total_ofertas': 0}
+        # Usar la primera búsqueda activa
+        puesto = busquedas_activas[0]['puesto']
+        lugar = busquedas_activas[0]['lugar']
+        logger.info(f"🎯 Búsqueda detectada: {puesto} en {lugar}")
+    
     scrapers_config = []
     if usar_computrabajo:
         scrapers_config.append({'scraper': ComputrabajoScraper(), 'nombre': 'Computrabajo', 'es_playwright': False})
@@ -139,8 +152,9 @@ def ejecutar_pipeline(puesto: str = "practicante de datos", lugar: str = "lima",
         scrapers_config.append({'scraper': BumeranScraper(), 'nombre': 'Bumeran', 'es_playwright': False})
     if usar_linkedin:
         scrapers_config.append({'scraper': LinkedInScraper(), 'nombre': 'LinkedIn', 'es_playwright': False})
-    if usar_indeed:
-        scrapers_config.append({'scraper': IndeedScraperPlaywright(), 'nombre': 'Indeed', 'es_playwright': True})
+    # ❌ INDEED DESACTIVADO
+    # if usar_indeed:
+    #     scrapers_config.append({'scraper': IndeedScraperPlaywright(), 'nombre': 'Indeed', 'es_playwright': True})
     
     if not scrapers_config:
         return {'success': False, 'error': 'No hay scrapers activados', 'total_ofertas': 0}
@@ -175,10 +189,11 @@ def ejecutar_pipeline(puesto: str = "practicante de datos", lugar: str = "lima",
                         "link_oferta": oferta.get("link_oferta", ""),
                         "titulo_puesto": oferta.get("titulo_puesto", ""),
                         "empresa": "N/A", "modalidad": "N/A", "disponible_hasta": "-",
-                        "nivel": "N/A", "horario": "N/A",
+                        # ❌ ELIMINADO: "nivel": "N/A",
+                        "horario": "N/A",
                         "departamento": lugar.capitalize(),
                         "area_categoria": "General",
-                        "descripcion_breve": oferta.get("texto_crudo", "")[:500],
+                        "descripcion_breve": oferta.get("texto_crudo", "")[:2000],
                         "requisitos": "N/A", "beneficios": "N/A"
                     })
             
@@ -213,15 +228,15 @@ if __name__ == "__main__":
     logger.remove()
     logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{message}</cyan>", level="INFO")
     
-    # ✅ AQUÍ SE ACTIVAN LOS 4 SCRAPERS PARA GITHUB ACTIONS
+    # ✅ EJECUTAR LEYENDO DESDE CONFIG_BUSQUEDAS
     resultados = ejecutar_pipeline(
-        puesto="practicante de datos",
-        lugar="lima",
-        limite_ofertas=15,  # 15 por portal
+        puesto=None,  # ✅ None para leer desde Sheets
+        lugar=None,   # ✅ None para leer desde Sheets
+        limite_ofertas=15,
         usar_bumeran=True,
         usar_computrabajo=True,
-        usar_linkedin=True,   # ✅ ACTIVADO
-        usar_indeed=True,     # ✅ ACTIVADO
+        usar_linkedin=True,
+        usar_indeed=False,  # ❌ DESACTIVADO
         usar_nlp=True
     )
     
