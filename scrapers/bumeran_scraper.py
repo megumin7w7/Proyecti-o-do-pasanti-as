@@ -1,5 +1,5 @@
 """
-Módulo: scrapers/bumeran_scraper.py (Versión Blindada para Playwright)
+Módulo: scrapers/bumeran_scraper.py (Con Diagnóstico de Fallos)
 """
 import time
 import re
@@ -7,7 +7,6 @@ from scrapers.base_scraper import BaseScraper
 from loguru import logger
 
 class BumeranScraper(BaseScraper):
-    """Scraper específico para Bumeran usando Playwright"""
     def __init__(self):
         super().__init__()
         self.plataforma = "Bumeran"
@@ -16,7 +15,7 @@ class BumeranScraper(BaseScraper):
     def _destruir_modales(self):
         try:
             self.page.evaluate("""
-                document.querySelectorAll('[class*="banner"], [id*="cookie"], [class*="modal"], [class*="overlay"]').forEach(e => e.remove());
+                document.querySelectorAll('[class*="banner"], [id*="cookie"], [class*="modal"]').forEach(e => e.remove());
                 document.body.style.overflow = 'auto';
             """)
         except Exception:
@@ -35,7 +34,6 @@ class BumeranScraper(BaseScraper):
         
         try:
             while len(ofertas_recopiladas) < limite_ofertas:
-                # Estrategia de URL: Intentar con ubicación, si no, sin ubicación
                 if lugar_slug and pagina_actual == 1:
                     url_busqueda = f"https://www.bumeran.com.pe/empleos-busqueda-{puesto_slug}-en-{lugar_slug}.html"
                 else:
@@ -50,16 +48,21 @@ class BumeranScraper(BaseScraper):
                 time.sleep(3)
                 self._destruir_modales()
                 
-                # 🛡️ DETECTOR DE CAPTCHA: Si Bumeran nos bloquea, salimos limpiamente
-                page_content = self.page.inner_text("body").lower()
-                if "verifica que eres un humano" in page_content or "cloudflare" in page_content or "acceso denegado" in page_content:
-                    logger.warning("🛡️ Bumeran detectó comportamiento de bot (CAPTCHA). Saltando portal...")
+                # 🕵️ DIAGNÓSTICO: Verificar título y posible bloqueo
+                page_title = self.page.title()
+                logger.info(f"📄 Título de la página recibida: '{page_title}'")
+                
+                if "access denied" in page_title.lower() or "cloudflare" in page_title.lower() or "just a moment" in page_title.lower():
+                    logger.error("🛡️ BLOQUEO DETECTADO: Bumeran bloqueó la IP del servidor (Cloudflare/Datadome).")
+                    # Guardar evidencia
+                    self.page.screenshot(path="bumeran_bloqueo.png")
+                    logger.info("📸 Screenshot guardado como 'bumeran_bloqueo.png'")
                     break
                 
                 self.scroll_al_final()
                 time.sleep(2)
                 
-                # ✅ SELECTOR INFALIBLE: Buscar TODOS los enlaces y filtrar en memoria
+                # Buscar TODOS los enlaces y filtrar
                 enlaces = self.obtener_elementos("a")
                 count_total = enlaces.count()
                 
@@ -68,7 +71,6 @@ class BumeranScraper(BaseScraper):
                     try:
                         enlace = enlaces.nth(i)
                         href = enlace.get_attribute("href")
-                        # Filtramos manualmente por patrones conocidos de Bumeran
                         if href and ("/aviso/" in href or "-aviso-" in href) and "busqueda" not in href:
                             texto_tarjeta = enlace.inner_text()
                             if texto_tarjeta and len(texto_tarjeta.strip()) > 10:
@@ -76,28 +78,27 @@ class BumeranScraper(BaseScraper):
                     except:
                         continue
                 
-                # Eliminar duplicados manteniendo el orden
                 seen = set()
-                enlaces_unicos = []
-                for href, texto in enlaces_ofertas:
-                    if href not in seen:
-                        seen.add(href)
-                        enlaces_unicos.append((href, texto))
-                
+                enlaces_unicos = [(h, t) for h, t in enlaces_ofertas if not (h in seen or seen.add(h))]
                 count = len(enlaces_unicos)
                 
                 if count == 0:
-                    logger.warning(f"⚠️ No se encontraron enlaces de ofertas válidos en página {pagina_actual}.")
+                    logger.warning(f"⚠️ No se encontraron enlaces de ofertas válidos.")
+                    # 🕵️ DIAGNÓSTICO: Guardar screenshot de la página vacía
+                    self.page.screenshot(path="bumeran_vacia.png")
+                    logger.info("📸 Screenshot de página vacía guardado como 'bumeran_vacia.png'")
+                    
+                    # Intentar imprimir los primeros 200 caracteres del body para ver qué hay
+                    body_text = self.page.inner_text("body")[:200]
+                    logger.debug(f"🔍 Fragmento del body: '{body_text}'")
                     break
                 
                 logger.info(f"📦 {count} enlaces de ofertas únicos encontrados")
                 
-                # Procesar ofertas
                 for href, texto_tarjeta in enlaces_unicos:
                     if len(ofertas_recopiladas) >= limite_ofertas:
                         break
                     
-                    # Limpiar título (la primera línea no vacía suele ser el título)
                     lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip() and len(l.strip()) > 3]
                     if not lineas:
                         continue
@@ -111,15 +112,12 @@ class BumeranScraper(BaseScraper):
                     try:
                         self.page.evaluate(f"window.open('{href}', '_blank')")
                         self.page.wait_for_timeout(1500)
-                        
-                        # Cambiar a nueva pestaña
                         self.page = self.page.context.pages[-1]
                         time.sleep(2)
                         self._destruir_modales()
                         
-                        # Extraer texto
                         try:
-                            cuerpo = self.page.locator("main, section, div.job-description, div.offer-content").first
+                            cuerpo = self.page.locator("main, section, div.job-description").first
                             texto_crudo = cuerpo.inner_text()
                         except:
                             texto_crudo = self.page.inner_text("body")
@@ -134,13 +132,9 @@ class BumeranScraper(BaseScraper):
                                 "titulo_puesto": titulo
                             })
                             logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:35]}...")
-                        else:
-                            logger.debug(f"⚠️ Descartado (texto corto/bloqueado): {titulo[:30]}")
                         
-                        # Cerrar y volver
                         self.page.close()
                         self.page = self.page.context.pages[0]
-                        
                     except Exception as e:
                         logger.error(f"❌ Error en oferta: {e}")
                         if len(self.page.context.pages) > 1:
@@ -148,12 +142,11 @@ class BumeranScraper(BaseScraper):
                             self.page = self.page.context.pages[0]
                 
                 pagina_actual += 1
-                if pagina_actual > 10: # Límite de seguridad
-                    logger.info("🏁 Límite de 10 páginas alcanzado para Bumeran.")
+                if pagina_actual > 5: 
                     break
                     
         except Exception as e:
             logger.error(f"❌ Error crítico en Bumeran: {e}")
         
-        logger.info(f"✅ Total Bumeran: {len(ofertas_recopiladas)} ofertas extraídas con éxito")
+        logger.info(f"✅ Total Bumeran: {len(ofertas_recopiladas)} ofertas extraídas")
         return ofertas_recopiladas
