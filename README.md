@@ -50,38 +50,6 @@ El sistema combina:
 
 ---
 
-## ️ Estructura del Repositorio
-📁 PROYECTIÑO_DO_PASANTIÑAS/
-│
-── 📱 app.py ← Dashboard Streamlit (Interfaz principal)
-├── 🎯 main.py ← Orquestador del pipeline
-├── ️ config/
-│ ── settings.py ← Configuración global
-│
-├── 🤖 scrapers/
-│ ├── base_scraper.py ← Clase base Selenium
-│ ├── computrabajo_scraper.py ← Scraper Computrabajo
-│ ├── bumeran_scraper.py ← Scraper Bumeran
-│ ├── linkedin_scraper.py ← Scraper LinkedIn
-│ └── indeed_scraper.py ← Scraper Indeed (Playwright)
-│
-├── 🧠 nlp/
-│ ├── text_cleaner.py ← Limpieza y normalización de texto
-│ ── ai_extractor.py ← Extracción semántica con spaCy
-│
-├── 💾 storage/
-│ └── sheets_handler.py ← Persistencia en Google Sheets
-│
-├── 📊 notebooks/
-│ ├── Limpieza_BD_LaboralAI.ipynb ← ETL y limpieza de datos MongoDB
-│ ── Analisis_Calidad_Datos.ipynb ← Auditoría de calidad de datos
-│
-├── 📄 Dockerfile ← Contenedor para Hugging Face
-── 📋 requirements.txt ← Dependencias Python
-└── 📖 README.md ← Este archivo
-
----
-
 ## 🚀 Características Principales
 
 ###  Scraping Multiplataforma
