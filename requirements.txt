@@ -1,6 +1,4 @@
 streamlit>=1.31.0
-selenium>=4.15.0
-webdriver-manager>=4.0.0
 playwright>=1.40.0
 playwright-stealth>=1.0.6
 loguru>=0.7.0
