@@ -1,8 +1,5 @@
-# ============================================================================
-# Módulo: scrapers/base_scraper.py
-# ============================================================================
-
 import time
+import platform
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -12,89 +9,70 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from loguru import logger
 
-# Importar configuraciones
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.settings import HEADLESS_MODE, TIMEOUT_SECONDS
 
-
 class BaseScraper:
-    """
-    Clase base para todos los scrapers.
-    Proporciona funcionalidades comunes: navegador, esperas, extracción de texto.
-    """
-    
+    """Clase base para todos los scrapers con configuraciones antibloqueo."""
     def __init__(self):
         self.driver = None
         self.wait = None
         self.logger = logger
         self.logger.info("✅ BaseScraper inicializado")
-    
+
     def iniciar_navegador(self):
-        """Inicializa el navegador Chrome con configuraciones estables."""
+        """Inicializa el navegador Chrome con configuraciones antibloqueo."""
         self.logger.info("🌐 Configurando navegador Chrome...")
         chrome_options = Options()
         
-        # Configuración ANTI-BLOQUEO y ESTABLE
+        # 1. Configuraciones Anti-Detección y Estabilidad
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
-        chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_argument("--disable-popup-blocking")
-        chrome_options.add_argument("--ignore-certificate-errors")
         
-        # Headless mode
+        # 2. 🚨 FIX CRÍTICO PARA RENDER: Indicar dónde está el binario de Chromium en Linux
+        if platform.system() == "Linux":
+            chrome_options.binary_location = '/usr/bin/chromium'
+            
+        # 3. Modo headless (sin interfaz gráfica)
         if HEADLESS_MODE:
             chrome_options.add_argument("--headless=new")
+            
+        # 4. Inicializar driver
+        service = Service(ChromeDriverManager().install())
+        self.driver = webdriver.Chrome(service=service, options=chrome_options)
         
-        try:
-            # Usar webdriver-manager con configuración específica
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
-            
-            # Configurar timeouts MÁS CORTOS para evitar session timeout
-            self.driver.set_page_load_timeout(30)  # Reducido de 15 a 30
-            self.driver.set_script_timeout(30)
-            self.driver.implicitly_wait(10)  # Reducido de 15 a 10
-            
-            self.driver.maximize_window()
-            self.wait = WebDriverWait(self.driver, 15, poll_frequency=0.5)
-            
-            self.logger.info("✅ Navegador iniciado con éxito")
-            return self.driver
-            
-        except Exception as e:
-            self.logger.error(f"❌ Error iniciando navegador: {e}")
-            raise
-    
+        # 5. Configurar tiempos de espera
+        self.driver.implicitly_wait(TIMEOUT_SECONDS)
+        self.driver.maximize_window()
+        self.wait = WebDriverWait(self.driver, TIMEOUT_SECONDS)
+        
+        self.logger.info("✅ Navegador iniciado con éxito")
+        return self.driver
+
     def obtener_texto_pagina(self, url: str) -> str:
-        """Navega a una URL y extrae todo el texto visible de la página."""
         if not self.driver:
             self.iniciar_navegador()
-        
         try:
             self.logger.info(f"🕵️ Extrayendo información de: {url[:80]}...")
             self.driver.get(url)
-            time.sleep(2)  # Esperar carga inicial
-            
-            # Extraer todo el texto del body
+            time.sleep(2)
             texto_crudo = self.driver.find_element("tag name", "body").text
             self.logger.debug(f"✅ Extraídos {len(texto_crudo)} caracteres")
             return texto_crudo
-            
         except TimeoutException:
             self.logger.error(f"❌ Timeout al cargar {url}")
             return None
         except Exception as e:
             self.logger.error(f"❌ Error al extraer de {url}: {e}")
             return None
-    
+
     def esperar_elemento(self, by, selector, timeout: int = None):
-        """Espera a que un elemento esté presente en la página"""
         try:
             wait_time = timeout or TIMEOUT_SECONDS
             wait = WebDriverWait(self.driver, wait_time)
@@ -102,33 +80,10 @@ class BaseScraper:
         except TimeoutException:
             self.logger.warning(f"⚠️ Elemento no encontrado: {selector}")
             return None
-    
+
     def cerrar_navegador(self):
-        """Cierra la sesión del navegador de forma segura."""
         if self.driver:
             self.driver.quit()
             self.driver = None
             self.wait = None
             self.logger.info("🔒 Navegador cerrado de forma segura")
-
-
-# ============================================================================
-# TEST RÁPIDO
-# ============================================================================
-
-if __name__ == "__main__":
-    print("="*50)
-    print("PRUEBA DE BASE_SCRAPER")
-    print("="*50)
-    
-    scraper = BaseScraper()
-    scraper.iniciar_navegador()
-    
-    # Probar con una URL simple
-    texto = scraper.obtener_texto_pagina("https://www.google.com")
-    if texto:
-        print(f"\n✅ Texto obtenido: {texto[:200]}...")
-    else:
-        print("\n❌ No se obtuvo texto")
-    
-    scraper.cerrar_navegador()
