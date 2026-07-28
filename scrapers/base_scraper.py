@@ -42,7 +42,7 @@ class BaseScraper:
         self.logger.info("️ Chromedriver no encontrado en rutas del sistema, usando webdriver-manager")
         return ChromeDriverManager().install()
 
-    def iniciar_navegador(self):
+        def iniciar_navegador(self):
         """Inicializa el navegador Chrome con configuraciones antibloqueo."""
         self.logger.info("🌐 Configurando navegador Chrome...")
         chrome_options = Options()
@@ -55,10 +55,20 @@ class BaseScraper:
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        # 2. 🚨 FIX CRÍTICO PARA RENDER (LINUX)
+        # 2. 🚨 FIX CRÍTICO PARA RENDER (LINUX): Buscar en múltiples rutas
         if platform.system() == "Linux":
-            chrome_options.binary_location = '/usr/bin/chromium'
-            self.logger.info("🐧 Entorno Linux detectado: Usando /usr/bin/chromium")
+            posibles_rutas = ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome']
+            ruta_encontrada = None
+            for ruta in posibles_rutas:
+                if os.path.exists(ruta):
+                    ruta_encontrada = ruta
+                    break
+            
+            if ruta_encontrada:
+                chrome_options.binary_location = ruta_encontrada
+                self.logger.info(f"🐧 Entorno Linux detectado: Usando navegador en {ruta_encontrada}")
+            else:
+                self.logger.warning("⚠️ No se encontró binario de Chromium. Intentando con default...")
             
             # Buscar chromedriver automáticamente
             driver_path = self._encontrar_chromedriver()
