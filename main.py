@@ -1,11 +1,7 @@
 """
-Módulo: main.py (Orquestador con Config_Busquedas, Indeed desactivado, sin campo nivel)
+Módulo: main.py (Orquestador optimizado para GitHub Actions)
 """
-import sys
-import os
-import time
-import hashlib
-import json
+import sys, os, time, hashlib, json
 from datetime import datetime
 from typing import List, Dict, Optional
 from loguru import logger
@@ -14,44 +10,31 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from nlp.text_cleaner import TextCleaner
 from nlp.ai_extractor import AIExtractor
 from storage.sheets_handler import SheetsHandler, SheetsHandlerSimulado
-
 from scrapers.computrabajo_scraper import ComputrabajoScraper
 from scrapers.linkedin_scraper import LinkedInScraper
 from scrapers.bumeran_scraper import BumeranScraper
-# from scrapers.indeed_scraper import IndeedScraperPlaywright  # ❌ DESACTIVADO TEMPORALMENTE
 
 def es_titulo_relevante(titulo: str, puesto_buscado: str) -> bool:
-    titulo_lower = titulo.lower().strip()
-    puesto_lower = puesto_buscado.lower().strip()
-    if puesto_lower in titulo_lower:
-        return True
-    genericos = ["practicante", "pasante", "trainee", "intern", "prácticas", "practicas", "estudiante", "apoyo"]
-    return any(gen in titulo_lower for gen in genericos)
+    titulo_lower, puesto_lower = titulo.lower().strip(), puesto_buscado.lower().strip()
+    if puesto_lower in titulo_lower: return True
+    return any(gen in titulo_lower for gen in ["practicante", "pasante", "trainee", "intern", "prácticas", "estudiante", "apoyo"])
 
 def validar_contenido_semantico(oferta: dict, puesto: str) -> bool:
     DICCIONARIO_AREAS = {
-        "marketing": ["marketing", "branding", "digital", "seo", "sem", "growth", "comunicaciones", "publicidad", "social media", "community manager"],
-        "datos": ["data", "datos", "analytics", "analista de datos", "bi", "business intelligence", "sql", "power bi", "python", "excel", "dashboard", "tableau"]
+        "marketing": ["marketing", "branding", "digital", "seo", "sem", "growth", "comunicaciones", "publicidad", "social media"],
+        "datos": ["data", "datos", "analytics", "analista de datos", "bi", "business intelligence", "sql", "power bi", "python", "excel", "dashboard"]
     }
-    texto = oferta.get("texto_crudo", "").lower()
-    titulo = oferta.get("titulo_puesto", "").lower()
+    texto, titulo = oferta.get("texto_crudo", "").lower(), oferta.get("titulo_puesto", "").lower()
     puesto_normalizado = puesto.lower()
-    
     palabras_clave = [puesto_normalizado]
-    if "marketing" in puesto_normalizado:
-        palabras_clave.extend(DICCIONARIO_AREAS["marketing"])
-    elif any(x in puesto_normalizado for x in ["dato", "data", "analyst"]):
-        palabras_clave.extend(DICCIONARIO_AREAS["datos"])
-    else:
-        palabras_clave.extend(puesto_normalizado.split())
-    
-    return any(palabra in titulo for palabra in palabras_clave) or any(palabra in texto for palabra in palabras_clave)
+    if "marketing" in puesto_normalizado: palabras_clave.extend(DICCIONARIO_AREAS["marketing"])
+    elif any(x in puesto_normalizado for x in ["dato", "data", "analyst"]): palabras_clave.extend(DICCIONARIO_AREAS["datos"])
+    else: palabras_clave.extend(puesto_normalizado.split())
+    return any(p in titulo for p in palabras_clave) or any(p in texto for p in palabras_clave)
 
 def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cleaner: TextCleaner, extractor: AIExtractor) -> Optional[Dict]:
-    texto_crudo = oferta.get("texto_crudo", "")
-    titulo_oferta = oferta.get("titulo_puesto", "No especificado")
-    if not texto_crudo or len(texto_crudo) < 50:
-        return None
+    texto_crudo, titulo_oferta = oferta.get("texto_crudo", ""), oferta.get("titulo_puesto", "No especificado")
+    if not texto_crudo or len(texto_crudo) < 50: return None
     
     try:
         texto_limpio = cleaner.limpiar_texto(texto_crudo)
@@ -60,14 +43,14 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
         puesto_normalizado = oferta.get("puesto_buscado", "").lower()
         categoria_hoja = "Marketing" if "marketing" in puesto_normalizado else "Data & Analytics"
         
-        # ✅ COMPRESIÓN DE DATOS PARA EXCEL
+        # ✅ COMPRESIÓN DE DATOS PARA EXCEL (Evita filas deformadas)
         reqs_raw = datos_extraidos.get("requisitos", [])
         reqs_text = [r.get("texto", "") for r in reqs_raw if r.get("texto")]
-        requisitos_comprimidos = "; ".join(reqs_text[:8])
+        requisitos_comprimidos = "; ".join(reqs_text[:8])  # Máx 8 requisitos
         
         bens_raw = datos_extraidos.get("beneficios", "")
         bens_list = [b.strip("• \n\r") for b in bens_raw.split("\n") if b.strip() and len(b.strip()) > 5]
-        beneficios_comprimidos = "; ".join(bens_list[:5])
+        beneficios_comprimidos = "; ".join(bens_list[:5])  # Máx 5 beneficios
         
         return {
             "id_oferta": f"{nombre_plataforma[:3].upper()}-{id_unico}",
@@ -78,7 +61,7 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
             "empresa": datos_extraidos.get("empresa", "No especificada"),
             "modalidad": datos_extraidos.get("modalidad", "Presencial"),
             "disponible_hasta": "-",
-            # ❌ ELIMINADO: "nivel": datos_extraidos.get("nivel", "Practicante"),
+            # ❌ ELIMINADO: "nivel"
             "horario": datos_extraidos.get("horario", "Tiempo Completo"),
             "departamento": lugar.capitalize(),
             "area_categoria": categoria_hoja,
@@ -87,18 +70,17 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
             "beneficios": beneficios_comprimidos if beneficios_comprimidos else "No especificados"
         }
     except Exception as e:
-        logger.error(f"❌ Error procesando oferta con NLP: {e}")
+        logger.error(f"❌ Error NLP: {e}")
         return None
 
 def ejecutar_scraper(scraper, nombre: str, puesto: str, lugar: str, limite_ofertas: int, es_playwright: bool = False) -> List[Dict]:
-    logger.info(f"\n RASTREANDO: {nombre}")
-    logger.info("-" * 50)
+    logger.info(f"\n📌 RASTREANDO: {nombre}\n" + "-" * 50)
     try:
         if es_playwright:
             ofertas_crudas = scraper.recolectar_ofertas_sync(puesto=puesto, lugar=lugar, limite_ofertas=limite_ofertas, filtro_relevancia_cb=es_titulo_relevante)
         else:
             ofertas_crudas = scraper.recolectar_ofertas(url_semilla="", limite_ofertas=limite_ofertas, puesto=puesto, lugar=lugar, filtro_relevancia_cb=es_titulo_relevante)
-            
+        
         if not ofertas_crudas:
             logger.warning(f"⚠️ No se extrajeron ofertas de {nombre}.")
             return []
@@ -110,66 +92,42 @@ def ejecutar_scraper(scraper, nombre: str, puesto: str, lugar: str, limite_ofert
         logger.error(f"❌ Error en portal {nombre}: {e}")
         return []
     finally:
-        try:
-            scraper.cerrar_navegador()
-        except:
-            pass
+        try: scraper.cerrar_navegador()
+        except: pass
 
 def ejecutar_pipeline(puesto: str = None, lugar: str = None, limite_ofertas: int = 15, 
                      usar_bumeran: bool = True, usar_computrabajo: bool = True, 
                      usar_linkedin: bool = True, usar_indeed: bool = False,  # ❌ INDEED DESACTIVADO
                      usar_nlp: bool = True, progress_callback=None) -> Dict:
-    logger.info("=" * 60)
-    logger.info(" INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI")
-    logger.info(f" Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info("=" * 60)
-    
+    logger.info("=" * 60 + "\n🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI\n" + "=" * 60)
     start_time = time.time()
-    cleaner = TextCleaner()
-    extractor = AIExtractor()
+    cleaner, extractor = TextCleaner(), AIExtractor()
     
-    try:
-        storage = SheetsHandler()
-    except:
-        storage = SheetsHandlerSimulado()
+    try: storage = SheetsHandler()
+    except: storage = SheetsHandlerSimulado()
     
-    # ✅ LEER CONFIGURACIÓN DESDE GOOGLE SHEETS
     if puesto is None or lugar is None:
         logger.info("📋 Leyendo configuración desde Config_Busquedas...")
         busquedas_activas = storage.obtener_busquedas_activas()
         if not busquedas_activas:
-            logger.error("❌ No hay búsquedas activas en Config_Busquedas")
             return {'success': False, 'error': 'No hay búsquedas activas', 'total_ofertas': 0}
-        # Usar la primera búsqueda activa
-        puesto = busquedas_activas[0]['puesto']
-        lugar = busquedas_activas[0]['lugar']
+        puesto, lugar = busquedas_activas[0]['puesto'], busquedas_activas[0]['lugar']
         logger.info(f"🎯 Búsqueda detectada: {puesto} en {lugar}")
     
     scrapers_config = []
-    if usar_computrabajo:
-        scrapers_config.append({'scraper': ComputrabajoScraper(), 'nombre': 'Computrabajo', 'es_playwright': False})
-    if usar_bumeran:
-        scrapers_config.append({'scraper': BumeranScraper(), 'nombre': 'Bumeran', 'es_playwright': False})
-    if usar_linkedin:
-        scrapers_config.append({'scraper': LinkedInScraper(), 'nombre': 'LinkedIn', 'es_playwright': False})
-    # ❌ INDEED DESACTIVADO
-    # if usar_indeed:
-    #     scrapers_config.append({'scraper': IndeedScraperPlaywright(), 'nombre': 'Indeed', 'es_playwright': True})
+    if usar_computrabajo: scrapers_config.append({'scraper': ComputrabajoScraper(), 'nombre': 'Computrabajo', 'es_playwright': False})
+    if usar_bumeran: scrapers_config.append({'scraper': BumeranScraper(), 'nombre': 'Bumeran', 'es_playwright': False})
+    if usar_linkedin: scrapers_config.append({'scraper': LinkedInScraper(), 'nombre': 'LinkedIn', 'es_playwright': False})
     
-    if not scrapers_config:
-        return {'success': False, 'error': 'No hay scrapers activados', 'total_ofertas': 0}
+    if not scrapers_config: return {'success': False, 'error': 'No hay scrapers activados', 'total_ofertas': 0}
     
-    total_ofertas_guardadas = 0
-    resultados_por_scraper = {}
-    todos_los_payloads = []
+    total_ofertas_guardadas, resultados_por_scraper, todos_los_payloads = 0, {}, []
     
     try:
         for idx, config in enumerate(scrapers_config, 1):
-            if progress_callback:
-                progress_callback(idx, len(scrapers_config), f"Ejecutando {config['nombre']}...")
+            if progress_callback: progress_callback(idx, len(scrapers_config), f"Ejecutando {config['nombre']}...")
             
             ofertas_validadas = ejecutar_scraper(config['scraper'], config['nombre'], puesto, lugar, limite_ofertas, config['es_playwright'])
-            
             if not ofertas_validadas:
                 resultados_por_scraper[config['nombre']] = {'extraidas': 0, 'guardadas': 0}
                 continue
@@ -179,68 +137,33 @@ def ejecutar_pipeline(puesto: str = None, lugar: str = None, limite_ofertas: int
                 oferta['puesto_buscado'] = puesto
                 if usar_nlp:
                     payload = procesar_oferta_con_nlp(oferta, config['nombre'], lugar, cleaner, extractor)
-                    if payload:
-                        payloads.append(payload)
+                    if payload: payloads.append(payload)
                 else:
-                    payloads.append({
-                        "id_oferta": f"{config['nombre'][:3].upper()}-x",
-                        "fecha_scraping": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        "plataforma_origen": config['nombre'],
-                        "link_oferta": oferta.get("link_oferta", ""),
-                        "titulo_puesto": oferta.get("titulo_puesto", ""),
-                        "empresa": "N/A", "modalidad": "N/A", "disponible_hasta": "-",
-                        # ❌ ELIMINADO: "nivel": "N/A",
-                        "horario": "N/A",
-                        "departamento": lugar.capitalize(),
-                        "area_categoria": "General",
-                        "descripcion_breve": oferta.get("texto_crudo", "")[:2000],
-                        "requisitos": "N/A", "beneficios": "N/A"
-                    })
+                    payloads.append({"id_oferta": f"{config['nombre'][:3].upper()}-x", "fecha_scraping": datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "plataforma_origen": config['nombre'], "link_oferta": oferta.get("link_oferta", ""), "titulo_puesto": oferta.get("titulo_puesto", ""), "empresa": "N/A", "modalidad": "N/A", "disponible_hasta": "-", "horario": "N/A", "departamento": lugar.capitalize(), "area_categoria": "General", "descripcion_breve": oferta.get("texto_crudo", "")[:2000], "requisitos": "N/A", "beneficios": "N/A"})
             
             stats = storage.verificar_y_guardar(ofertas_del_scraper=payloads, nombre_scraper=config['nombre'], puesto=puesto, lugar=lugar)
-            resultados_por_scraper[config['nombre']] = {
-                'extraidas': len(ofertas_validadas),
-                'guardadas': stats.get('guardadas', 0),
-                'duplicadas': stats.get('duplicadas', 0),
-                'errores': stats.get('errores', 0)
-            }
+            resultados_por_scraper[config['nombre']] = {'extraidas': len(ofertas_validadas), 'guardadas': stats.get('guardadas', 0), 'duplicadas': stats.get('duplicadas', 0), 'errores': stats.get('errores', 0)}
             total_ofertas_guardadas += stats.get('guardadas', 0)
             todos_los_payloads.extend(payloads)
             logger.info(f"✅ {config['nombre']}: {stats.get('guardadas', 0)} nuevas")
             
-        if progress_callback:
-            progress_callback(len(scrapers_config), len(scrapers_config), "✅ Pipeline completado")
-            
+        if progress_callback: progress_callback(len(scrapers_config), len(scrapers_config), "✅ Pipeline completado")
     except Exception as e:
         logger.critical(f"💥 Falla general: {e}")
         return {'success': False, 'error': str(e), 'total_ofertas': total_ofertas_guardadas}
         
     logger.info(f"\n📊 Total guardadas: {total_ofertas_guardadas} | ⏱️ Tiempo: {time.time() - start_time:.2f}s")
-    return {
-        'success': True,
-        'total_ofertas': total_ofertas_guardadas,
-        'resultados_por_scraper': resultados_por_scraper,
-        'tiempo_ejecucion': time.time() - start_time,
-        'payloads': todos_los_payloads
-    }
+    return {'success': True, 'total_ofertas': total_ofertas_guardadas, 'resultados_por_scraper': resultados_por_scraper, 'tiempo_ejecucion': time.time() - start_time, 'payloads': todos_los_payloads}
 
 if __name__ == "__main__":
     logger.remove()
     logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{message}</cyan>", level="INFO")
     
-    # ✅ EJECUTAR LEYENDO DESDE CONFIG_BUSQUEDAS
     resultados = ejecutar_pipeline(
-        puesto=None,  # ✅ None para leer desde Sheets
-        lugar=None,   # ✅ None para leer desde Sheets
-        limite_ofertas=15,
-        usar_bumeran=True,
-        usar_computrabajo=True,
-        usar_linkedin=True,
+        puesto=None, lugar=None, limite_ofertas=15,
+        usar_bumeran=True, usar_computrabajo=True, usar_linkedin=True,
         usar_indeed=False,  # ❌ DESACTIVADO
         usar_nlp=True
     )
-    
-    if resultados['success']:
-        print(f"\n✅ Pipeline completado: {resultados['total_ofertas']} ofertas guardadas")
-    else:
-        print(f"\n❌ Error: {resultados.get('error')}")
+    if resultados['success']: print(f"\n✅ Pipeline completado: {resultados['total_ofertas']} ofertas guardadas")
+    else: print(f"\n❌ Error: {resultados.get('error')}")
