@@ -39,12 +39,12 @@ class BaseScraper:
                 return ruta
         
         # Si no lo encuentra, usar webdriver-manager
-        self.logger.info("️ Chromedriver no encontrado en rutas del sistema, usando webdriver-manager")
+        self.logger.info("⚠️ Chromedriver no encontrado en rutas del sistema, usando webdriver-manager")
         return ChromeDriverManager().install()
 
-        def iniciar_navegador(self):
+    def iniciar_navegador(self):
         """Inicializa el navegador Chrome con configuraciones antibloqueo."""
-        self.logger.info("🌐 Configurando navegador Chrome...")
+        self.logger.info(" Configurando navegador Chrome...")
         chrome_options = Options()
         
         # 1. Configuraciones Anti-Detección y Estabilidad
@@ -106,7 +106,7 @@ class BaseScraper:
             self.logger.error(f"❌ Timeout al cargar {url}")
             return None
         except Exception as e:
-            self.logger.error(f" Error al extraer de {url}: {e}")
+            self.logger.error(f"❌ Error al extraer de {url}: {e}")
             return None
 
     def esperar_elemento(self, by, selector, timeout: int = None):
@@ -115,7 +115,7 @@ class BaseScraper:
             wait = WebDriverWait(self.driver, wait_time)
             return wait.until(EC.presence_of_element_located((by, selector)))
         except TimeoutException:
-            self.logger.warning(f"⚠️ Elemento no encontrado: {selector}")
+            self.logger.warning(f"️ Elemento no encontrado: {selector}")
             return None
 
     def cerrar_navegador(self):
@@ -123,4 +123,4 @@ class BaseScraper:
             self.driver.quit()
             self.driver = None
             self.wait = None
-            self.logger.info(" Navegador cerrado de forma segura")
+            self.logger.info("🔒 Navegador cerrado de forma segura")
