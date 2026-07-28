@@ -1,0 +1,837 @@
+2026-07-10 22:25:33.380 | INFO     | __main__:ejecutar_pipeline:26 - ============================================================
+2026-07-10 22:25:33.380 | INFO     | __main__:ejecutar_pipeline:27 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 22:25:33.380 | INFO     | __main__:ejecutar_pipeline:28 - 📅 Fecha: 2026-07-10 22:25:33
+2026-07-10 22:25:33.381 | INFO     | __main__:ejecutar_pipeline:29 - ============================================================
+2026-07-10 22:25:33.381 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 22:25:40.869 | INFO     | __main__:ejecutar_pipeline:26 - ============================================================
+2026-07-10 22:25:40.869 | INFO     | __main__:ejecutar_pipeline:27 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 22:25:40.869 | INFO     | __main__:ejecutar_pipeline:28 - 📅 Fecha: 2026-07-10 22:25:40
+2026-07-10 22:25:40.870 | INFO     | __main__:ejecutar_pipeline:29 - ============================================================
+2026-07-10 22:25:40.870 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 22:28:16.015 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 22:28:16.015 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 22:28:16.015 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 22:28:16
+2026-07-10 22:28:16.016 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 22:28:16.016 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 22:29:20.805 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 22:29:20.805 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 22:29:20.805 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 22:29:20
+2026-07-10 22:29:20.805 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 22:29:20.805 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 22:29:22.083 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 22:29:22.083 | WARNING  | storage.sheets_handler:_conectar_google_api:21 - ⚠️ No se encontró el archivo 'config\credentials.json'
+2026-07-10 22:29:22.083 | WARNING  | storage.sheets_handler:_conectar_google_api:22 - 💾 Modo simulación activado - los datos no se guardarán realmente
+2026-07-10 22:29:22.083 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 22:29:22.083 | INFO     | scrapers.computrabajo_scraper:__init__:24 - ✅ ComputrabajoScraper inicializado
+2026-07-10 22:29:22.084 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 22:29:22.084 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 22:29:22.084 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 22:29:22.084 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 22:29:22.084 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 22:29:23.504 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 22:29:23.504 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:35 - 🚀 Navegando a: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 22:29:28.836 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:54 - 🎯 Encontradas 3 ofertas
+2026-07-10 22:29:28.837 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [1/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:29:31.275 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [1] Extraídos 6445 caracteres
+2026-07-10 22:29:32.275 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [2/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:29:34.683 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [2] Extraídos 5463 caracteres
+2026-07-10 22:29:35.683 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [3/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:29:38.078 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [3] Extraídos 4874 caracteres
+2026-07-10 22:29:39.078 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:99 - 📌 Total extraído: 3 ofertas
+2026-07-10 22:29:39.079 | INFO     | __main__:ejecutar_pipeline:81 - 🧠 Computrabajo: Procesando 3 ofertas...
+2026-07-10 22:29:39.079 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [1/3] Procesando...
+2026-07-10 22:29:39.081 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:29:39.387 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Analista Programador Junior Azure...
+2026-07-10 22:29:39.387 | INFO     | storage.sheets_handler:guardar_oferta:114 - 💾 [Simulación] Oferta: Analista Programador Junior Azure
+2026-07-10 22:29:39.388 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [2/3] Procesando...
+2026-07-10 22:29:39.388 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:29:39.581 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Analista Programador Full Stack (Angular) - Presen...
+2026-07-10 22:29:39.581 | INFO     | storage.sheets_handler:guardar_oferta:114 - 💾 [Simulación] Oferta: Analista Programador Full Stack (Angular) - Presencial
+2026-07-10 22:29:39.581 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [3/3] Procesando...
+2026-07-10 22:29:39.582 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:29:39.767 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Programador ODOO - Urgente/Disponibilidad inmediat...
+2026-07-10 22:29:39.767 | INFO     | storage.sheets_handler:guardar_oferta:114 - 💾 [Simulación] Oferta: Programador ODOO - Urgente/Disponibilidad inmediata
+2026-07-10 22:29:42.139 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 22:29:42.140 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 22:29:42.140 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 22:29:42.140 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 22:29:42.140 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 22:29:42.140 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 22:29:42.140 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 22:29:42.141 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 22:29:42.141 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 3
+2026-07-10 22:29:42.141 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 22:29:42.141 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 21.33 segundos
+2026-07-10 22:29:42.141 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Simulación local
+2026-07-10 22:29:42.141 | INFO     | __main__:ejecutar_pipeline:152 - 
+📋 Últimas ofertas procesadas:
+2026-07-10 22:29:42.141 | INFO     | __main__:ejecutar_pipeline:154 -    - Analista Programador Junior Azure (Computrabajo)
+2026-07-10 22:29:42.141 | INFO     | __main__:ejecutar_pipeline:154 -    - Analista Programador Full Stack (Angular) - Presencial (Computrabajo)
+2026-07-10 22:29:42.142 | INFO     | __main__:ejecutar_pipeline:154 -    - Programador ODOO - Urgente/Disponibilidad inmediata (Computrabajo)
+2026-07-10 22:29:42.142 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 22:29:42.142 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 22:29:42.142 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 22:42:33.366 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 22:42:33.367 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 22:42:33.368 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 22:42:33
+2026-07-10 22:42:33.368 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 22:42:33.368 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 22:42:34.292 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 22:42:34.293 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 22:42:35.975 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 22:42:35.975 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 22:42:35.975 | INFO     | scrapers.computrabajo_scraper:__init__:24 - ✅ ComputrabajoScraper inicializado
+2026-07-10 22:42:35.975 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 22:42:35.975 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 22:42:35.975 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 22:42:35.975 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 22:42:35.975 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 22:42:37.562 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 22:42:37.563 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:35 - 🚀 Navegando a: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 22:42:42.917 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:54 - 🎯 Encontradas 3 ofertas
+2026-07-10 22:42:42.917 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [1/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:42:45.181 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [1] Extraídos 6423 caracteres
+2026-07-10 22:42:46.181 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [2/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:42:48.554 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [2] Extraídos 5453 caracteres
+2026-07-10 22:42:49.555 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [3/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:42:51.943 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [3] Extraídos 4361 caracteres
+2026-07-10 22:42:52.943 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:99 - 📌 Total extraído: 3 ofertas
+2026-07-10 22:42:52.943 | INFO     | __main__:ejecutar_pipeline:81 - 🧠 Computrabajo: Procesando 3 ofertas...
+2026-07-10 22:42:52.943 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [1/3] Procesando...
+2026-07-10 22:42:52.944 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:42:53.174 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Analista Programador Junior Azure...
+2026-07-10 22:42:53.409 | ERROR    | storage.sheets_handler:guardar_oferta:142 - ❌ Error guardando oferta: Ofertas_Extraidas
+2026-07-10 22:42:53.409 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [2/3] Procesando...
+2026-07-10 22:42:53.410 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:42:53.585 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Analista Programador Full Stack (Angular) - Presen...
+2026-07-10 22:42:53.808 | ERROR    | storage.sheets_handler:guardar_oferta:142 - ❌ Error guardando oferta: Ofertas_Extraidas
+2026-07-10 22:42:53.809 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [3/3] Procesando...
+2026-07-10 22:42:53.809 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:42:53.956 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Salesforce...
+2026-07-10 22:42:54.184 | ERROR    | storage.sheets_handler:guardar_oferta:142 - ❌ Error guardando oferta: Ofertas_Extraidas
+2026-07-10 22:42:56.536 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 22:42:56.537 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 22:42:56.537 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 22:42:56.537 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 22:42:56.537 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 22:42:56.537 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 22:42:56.537 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 22:42:56.538 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 22:42:56.538 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 3
+2026-07-10 22:42:56.538 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 22:42:56.538 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 23.17 segundos
+2026-07-10 22:42:56.538 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 22:42:56.538 | INFO     | __main__:ejecutar_pipeline:152 - 
+📋 Últimas ofertas procesadas:
+2026-07-10 22:42:56.538 | INFO     | __main__:ejecutar_pipeline:154 -    - Analista Programador Junior Azure (Computrabajo)
+2026-07-10 22:42:56.538 | INFO     | __main__:ejecutar_pipeline:154 -    - Analista Programador Full Stack (Angular) - Presencial (Computrabajo)
+2026-07-10 22:42:56.539 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Salesforce (Computrabajo)
+2026-07-10 22:42:56.539 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 22:42:56.539 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 22:42:56.539 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 22:45:57.788 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 22:45:57.789 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 22:45:57.789 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 22:45:57
+2026-07-10 22:45:57.789 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 22:45:57.790 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 22:45:58.835 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 22:45:58.835 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 22:46:00.332 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 22:46:00.333 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 22:46:00.333 | INFO     | scrapers.computrabajo_scraper:__init__:24 - ✅ ComputrabajoScraper inicializado
+2026-07-10 22:46:00.333 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 22:46:00.333 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 22:46:00.333 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 22:46:00.333 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 22:46:00.334 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 22:46:02.065 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 22:46:02.066 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:35 - 🚀 Navegando a: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 22:46:08.006 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:54 - 🎯 Encontradas 3 ofertas
+2026-07-10 22:46:08.006 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [1/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:46:10.477 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [1] Extraídos 6042 caracteres
+2026-07-10 22:46:11.478 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [2/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:46:13.863 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [2] Extraídos 6408 caracteres
+2026-07-10 22:46:14.863 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [3/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:46:17.275 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [3] Extraídos 4266 caracteres
+2026-07-10 22:46:18.276 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:99 - 📌 Total extraído: 3 ofertas
+2026-07-10 22:46:18.276 | INFO     | __main__:ejecutar_pipeline:81 - 🧠 Computrabajo: Procesando 3 ofertas...
+2026-07-10 22:46:18.277 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [1/3] Procesando...
+2026-07-10 22:46:18.277 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:46:18.526 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Analista desarrollador - Lima Sjm...
+2026-07-10 22:46:19.310 | INFO     | storage.sheets_handler:guardar_oferta:139 - 💾 Oferta guardada: Analista desarrollador - Lima Sjm
+2026-07-10 22:46:19.310 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [2/3] Procesando...
+2026-07-10 22:46:19.311 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:46:19.532 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Analista Programador Junior Azure...
+2026-07-10 22:46:20.122 | INFO     | storage.sheets_handler:guardar_oferta:139 - 💾 Oferta guardada: Analista Programador Junior Azure
+2026-07-10 22:46:20.123 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [3/3] Procesando...
+2026-07-10 22:46:20.123 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:46:20.263 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Programador Junior Odoo...
+2026-07-10 22:46:20.893 | INFO     | storage.sheets_handler:guardar_oferta:139 - 💾 Oferta guardada: Programador Junior Odoo
+2026-07-10 22:46:23.325 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 22:46:23.325 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 22:46:23.325 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 22:46:23.325 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 22:46:23.325 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 22:46:23.326 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 22:46:23.326 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 22:46:23.326 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 22:46:23.326 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 3
+2026-07-10 22:46:23.326 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 22:46:23.326 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 25.54 segundos
+2026-07-10 22:46:23.326 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 22:46:23.326 | INFO     | __main__:ejecutar_pipeline:152 - 
+📋 Últimas ofertas procesadas:
+2026-07-10 22:46:23.327 | INFO     | __main__:ejecutar_pipeline:154 -    - Analista desarrollador - Lima Sjm (Computrabajo)
+2026-07-10 22:46:23.327 | INFO     | __main__:ejecutar_pipeline:154 -    - Analista Programador Junior Azure (Computrabajo)
+2026-07-10 22:46:23.327 | INFO     | __main__:ejecutar_pipeline:154 -    - Programador Junior Odoo (Computrabajo)
+2026-07-10 22:46:23.327 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 22:46:23.327 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 22:46:23.327 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 22:55:53.940 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 22:55:53.940 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 22:55:53.941 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 22:55:53
+2026-07-10 22:55:53.941 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 22:55:53.941 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 22:55:55.024 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 22:55:55.024 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 22:55:56.992 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 22:55:56.993 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 22:55:56.993 | INFO     | scrapers.computrabajo_scraper:__init__:24 - ✅ ComputrabajoScraper inicializado
+2026-07-10 22:55:56.993 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 22:55:56.993 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 22:55:56.993 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 22:55:56.993 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 22:55:56.994 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 22:55:59.070 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 22:55:59.070 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:35 - 🚀 Navegando a: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 22:56:04.789 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:54 - 🎯 Encontradas 3 ofertas
+2026-07-10 22:56:04.789 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [1/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:56:07.224 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [1] Extraídos 3859 caracteres
+2026-07-10 22:56:08.225 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [2/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:56:10.624 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [2] Extraídos 4863 caracteres
+2026-07-10 22:56:11.624 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [3/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 22:56:14.035 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [3] Extraídos 5453 caracteres
+2026-07-10 22:56:15.035 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:99 - 📌 Total extraído: 3 ofertas
+2026-07-10 22:56:15.035 | INFO     | __main__:ejecutar_pipeline:81 - 🧠 Computrabajo: Procesando 3 ofertas...
+2026-07-10 22:56:15.036 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [1/3] Procesando...
+2026-07-10 22:56:15.036 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:56:15.272 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Web Junior...
+2026-07-10 22:56:16.110 | INFO     | storage.sheets_handler:guardar_oferta:139 - 💾 Oferta guardada: Desarrollador Web Junior
+2026-07-10 22:56:16.110 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [2/3] Procesando...
+2026-07-10 22:56:16.111 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:56:16.319 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Programador ODOO - Urgente/Disponibilidad inmediat...
+2026-07-10 22:56:16.894 | INFO     | storage.sheets_handler:guardar_oferta:139 - 💾 Oferta guardada: Programador ODOO - Urgente/Disponibilidad inmediata
+2026-07-10 22:56:16.894 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [3/3] Procesando...
+2026-07-10 22:56:16.894 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 22:56:17.116 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Analista Programador Full Stack (Angular) - Presen...
+2026-07-10 22:56:17.672 | INFO     | storage.sheets_handler:guardar_oferta:139 - 💾 Oferta guardada: Analista Programador Full Stack (Angular) - Presencial
+2026-07-10 22:56:20.154 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 22:56:20.154 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 22:56:20.155 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 22:56:20.155 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 22:56:20.155 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 22:56:20.155 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 22:56:20.156 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 22:56:20.156 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 22:56:20.156 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 3
+2026-07-10 22:56:20.156 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 22:56:20.156 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 26.21 segundos
+2026-07-10 22:56:20.156 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 22:56:20.156 | INFO     | __main__:ejecutar_pipeline:152 - 
+📋 Últimas ofertas procesadas:
+2026-07-10 22:56:20.157 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Web Junior (Computrabajo)
+2026-07-10 22:56:20.157 | INFO     | __main__:ejecutar_pipeline:154 -    - Programador ODOO - Urgente/Disponibilidad inmediata (Computrabajo)
+2026-07-10 22:56:20.157 | INFO     | __main__:ejecutar_pipeline:154 -    - Analista Programador Full Stack (Angular) - Presencial (Computrabajo)
+2026-07-10 22:56:20.157 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 22:56:20.157 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 22:56:20.157 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 23:02:44.227 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:02:44.233 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:02:44.239 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:02:44
+2026-07-10 23:02:44.241 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:02:44.256 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:02:45.154 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:02:45.154 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:02:46.609 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:02:46.609 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:02:46.609 | INFO     | scrapers.computrabajo_scraper:__init__:24 - ✅ ComputrabajoScraper inicializado
+2026-07-10 23:02:46.610 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:02:46.610 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:02:46.610 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:02:46.610 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:02:46.610 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 23:02:48.007 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 23:02:48.008 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:35 - 🚀 Navegando a: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 23:02:53.980 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:54 - 🎯 Encontradas 3 ofertas
+2026-07-10 23:02:53.980 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [1/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:02:56.391 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [1] Extraídos 6513 caracteres
+2026-07-10 23:02:57.391 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [2/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:02:59.759 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [2] Extraídos 3995 caracteres
+2026-07-10 23:03:00.759 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [3/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:03:03.126 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [3] Extraídos 4507 caracteres
+2026-07-10 23:03:04.127 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:99 - 📌 Total extraído: 3 ofertas
+2026-07-10 23:03:04.127 | INFO     | __main__:ejecutar_pipeline:81 - 🧠 Computrabajo: Procesando 3 ofertas...
+2026-07-10 23:03:04.127 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [1/3] Procesando...
+2026-07-10 23:03:04.128 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:03:04.408 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Java + Quarkus...
+2026-07-10 23:03:04.968 | INFO     | storage.sheets_handler:guardar_oferta:139 - 💾 Oferta guardada: Desarrollador Java + Quarkus
+2026-07-10 23:03:04.969 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [2/3] Procesando...
+2026-07-10 23:03:04.969 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:03:05.128 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Full Stack - Patio Panorama Surco...
+2026-07-10 23:03:05.674 | INFO     | storage.sheets_handler:guardar_oferta:139 - 💾 Oferta guardada: Desarrollador Full Stack - Patio Panorama Surco
+2026-07-10 23:03:05.674 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [3/3] Procesando...
+2026-07-10 23:03:05.675 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:03:05.839 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Semi Senior - Patio Panorama Surco...
+2026-07-10 23:03:06.332 | INFO     | storage.sheets_handler:guardar_oferta:139 - 💾 Oferta guardada: Desarrollador Semi Senior - Patio Panorama Surco
+2026-07-10 23:03:08.840 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 23:03:08.840 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 23:03:08.840 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:03:08.840 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 23:03:08.841 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 23:03:08.841 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 23:03:08.841 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 23:03:08.841 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 23:03:08.841 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 3
+2026-07-10 23:03:08.841 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 23:03:08.841 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 24.58 segundos
+2026-07-10 23:03:08.841 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 23:03:08.842 | INFO     | __main__:ejecutar_pipeline:152 - 
+📋 Últimas ofertas procesadas:
+2026-07-10 23:03:08.842 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Java + Quarkus (Computrabajo)
+2026-07-10 23:03:08.842 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Full Stack - Patio Panorama Surco (Computrabajo)
+2026-07-10 23:03:08.842 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Semi Senior - Patio Panorama Surco (Computrabajo)
+2026-07-10 23:03:08.842 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 23:03:08.842 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 23:03:08.843 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 23:03:38.720 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:03:38.721 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:03:38.721 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:03:38
+2026-07-10 23:03:38.721 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:03:38.722 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:03:39.693 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:03:39.693 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:03:40.868 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:03:40.868 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:03:40.869 | INFO     | scrapers.computrabajo_scraper:__init__:24 - ✅ ComputrabajoScraper inicializado
+2026-07-10 23:03:40.869 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:03:40.869 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:03:40.869 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:03:40.869 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:03:40.869 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 23:03:42.384 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 23:03:42.385 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:35 - 🚀 Navegando a: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 23:03:48.444 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:54 - 🎯 Encontradas 3 ofertas
+2026-07-10 23:03:48.445 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [1/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:03:50.850 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [1] Extraídos 4740 caracteres
+2026-07-10 23:03:51.851 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [2/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:03:54.234 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [2] Extraídos 6513 caracteres
+2026-07-10 23:03:55.235 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [3/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:03:57.647 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [3] Extraídos 6042 caracteres
+2026-07-10 23:03:58.648 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:99 - 📌 Total extraído: 3 ofertas
+2026-07-10 23:03:58.648 | INFO     | __main__:ejecutar_pipeline:81 - 🧠 Computrabajo: Procesando 3 ofertas...
+2026-07-10 23:03:58.648 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [1/3] Procesando...
+2026-07-10 23:03:58.649 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:03:58.896 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Full Stack Senior - Patio Panorama S...
+2026-07-10 23:03:59.486 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Desarrollador Full Stack Senior - Patio Panorama Surco
+2026-07-10 23:03:59.486 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [2/3] Procesando...
+2026-07-10 23:03:59.487 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:03:59.780 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Java + Quarkus...
+2026-07-10 23:04:00.331 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Desarrollador Java + Quarkus
+2026-07-10 23:04:00.331 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [3/3] Procesando...
+2026-07-10 23:04:00.332 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:04:00.597 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Analista desarrollador - Lima Sjm...
+2026-07-10 23:04:01.368 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Analista desarrollador - Lima Sjm
+2026-07-10 23:04:03.926 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 23:04:03.926 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 23:04:03.926 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:04:03.926 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 23:04:03.926 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 23:04:03.926 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 23:04:03.927 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 23:04:03.927 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 23:04:03.927 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 3
+2026-07-10 23:04:03.927 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 23:04:03.927 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 25.20 segundos
+2026-07-10 23:04:03.927 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 23:04:03.927 | INFO     | __main__:ejecutar_pipeline:152 - 
+📋 Últimas ofertas procesadas:
+2026-07-10 23:04:03.928 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Full Stack Senior - Patio Panorama Surco (Computrabajo)
+2026-07-10 23:04:03.928 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Java + Quarkus (Computrabajo)
+2026-07-10 23:04:03.928 | INFO     | __main__:ejecutar_pipeline:154 -    - Analista desarrollador - Lima Sjm (Computrabajo)
+2026-07-10 23:04:03.928 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 23:04:03.928 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 23:04:03.928 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 23:11:25.176 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:11:25.177 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:11:25.177 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:11:25
+2026-07-10 23:11:25.177 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:11:25.178 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:11:26.096 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:11:26.096 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:11:27.822 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:11:27.822 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:11:27.822 | INFO     | scrapers.computrabajo_scraper:__init__:26 - ✅ ComputrabajoScraper (Versión Industrial) inicializado
+2026-07-10 23:11:27.823 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:11:27.823 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:11:27.823 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:11:27.823 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:11:27.823 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 23:11:29.351 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 23:11:29.352 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:55 - 🚀 Navegando a: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 23:12:06.499 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:12:06.499 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:12:06.500 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:12:06
+2026-07-10 23:12:06.500 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:12:06.500 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:12:07.358 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:12:07.358 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:12:08.822 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:12:08.822 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:12:08.823 | INFO     | scrapers.computrabajo_scraper:__init__:26 - ✅ ComputrabajoScraper (Versión Industrial) inicializado
+2026-07-10 23:12:08.823 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:12:08.823 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:12:08.823 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:12:08.823 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:12:08.823 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 23:12:10.168 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 23:12:10.168 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:55 - 🚀 Navegando a: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 23:12:49.867 | ERROR    | scrapers.computrabajo_scraper:recolectar_ofertas:92 - ❌ Error al identificar ofertas: Message: invalid session id; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception
+Stacktrace:
+	chromedriver!GetHandleVerifier [0x7ff6c39ea865+152a5]
+	chromedriver!GetHandleVerifier [0x7ff6c39ea8c0+15300]
+	chromedriver!(No symbol) [0x7ff6c3545756]
+	chromedriver!(No symbol) [0x7ff6c3591ba6]
+	chromedriver!(No symbol) [0x7ff6c35c8d72]
+	chromedriver!(No symbol) [0x7ff6c35c2b92]
+	chromedriver!(No symbol) [0x7ff6c35c2352]
+	chromedriver!(No symbol) [0x7ff6c350de1b]
+	chromedriver!(No symbol) [0x7ff6c350e472]
+	chromedriver!(No symbol) [0x7ff6c350ea35]
+	chromedriver!GetHandleVerifier [0x7ff6c3fcd3a1+5f7de1]
+	chromedriver!GetHandleVerifier [0x7ff6c3fc7a3b+5f247b]
+	chromedriver!GetHandleVerifier [0x7ff6c3febca5+6166e5]
+	chromedriver!GetHandleVerifier [0x7ff6c3a072ae+31cee]
+	chromedriver!GetHandleVerifier [0x7ff6c3a0fe3c+3a87c]
+	chromedriver!(No symbol) [0x7ff6c350d39c]
+	chromedriver!GetHandleVerifier [0x7ff6c41aa558+7d4f98]
+	KERNEL32!BaseThreadInitThunk [0x7ff90aade957+17]
+	ntdll!RtlUserThreadStart [0x7ff90c46ad6c+2c]
+
+2026-07-10 23:12:49.868 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:170 - 🎯 Total recolectado: 0 ofertas de Computrabajo
+2026-07-10 23:12:49.868 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de Computrabajo
+2026-07-10 23:12:52.371 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 23:12:52.371 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 23:12:52.371 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:12:52.372 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 23:12:52.372 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 23:12:52.372 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 23:12:52.372 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 23:12:52.372 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 23:12:52.372 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 0
+2026-07-10 23:12:52.373 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 23:12:52.373 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 45.87 segundos
+2026-07-10 23:12:52.373 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 23:12:52.373 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 23:12:52.373 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 23:12:52.373 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 23:13:49.658 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:13:49.659 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:13:49.659 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:13:49
+2026-07-10 23:13:49.659 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:13:49.659 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:13:50.607 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:13:50.607 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:13:52.157 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:13:52.158 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:13:52.158 | INFO     | scrapers.computrabajo_scraper:__init__:26 - ✅ ComputrabajoScraper (Versión Industrial) inicializado
+2026-07-10 23:13:52.158 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:13:52.158 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:13:52.158 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:13:52.159 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:13:52.159 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 23:13:53.643 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 23:13:53.649 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:75 - 🚀 Navegando a: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 23:14:17.019 | WARNING  | scrapers.computrabajo_scraper:recolectar_ofertas:133 - ⚠️ Sesión perdida al buscar enlaces. Reconectando...
+2026-07-10 23:14:19.320 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 23:14:19.320 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 23:14:20.793 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 23:14:44.104 | WARNING  | scrapers.computrabajo_scraper:recolectar_ofertas:133 - ⚠️ Sesión perdida al buscar enlaces. Reconectando...
+2026-07-10 23:14:46.265 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 23:14:46.265 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 23:18:06.193 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:18:06.193 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:18:06.194 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:18:06
+2026-07-10 23:18:06.194 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:18:06.194 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:18:07.043 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:18:07.043 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:18:08.424 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:18:08.425 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:18:08.425 | INFO     | scrapers.computrabajo_scraper:__init__:24 - ✅ ComputrabajoScraper inicializado
+2026-07-10 23:18:08.425 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:18:08.425 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:18:08.425 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:18:08.425 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:18:08.426 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 23:18:10.021 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 23:18:10.022 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:35 - 🚀 Navegando a: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 23:18:16.523 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:54 - 🎯 Encontradas 3 ofertas
+2026-07-10 23:18:16.523 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [1/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:18:19.022 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [1] Extraídos 4362 caracteres
+2026-07-10 23:18:20.023 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [2/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:18:22.418 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [2] Extraídos 4267 caracteres
+2026-07-10 23:18:23.419 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:59 - 📦 [3/3] Extrayendo: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:18:25.878 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:83 - ✅ [3] Extraídos 4863 caracteres
+2026-07-10 23:18:26.878 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:99 - 📌 Total extraído: 3 ofertas
+2026-07-10 23:18:26.878 | INFO     | __main__:ejecutar_pipeline:81 - 🧠 Computrabajo: Procesando 3 ofertas...
+2026-07-10 23:18:26.879 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [1/3] Procesando...
+2026-07-10 23:18:26.879 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:18:27.082 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Salesforce...
+2026-07-10 23:18:27.708 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Desarrollador Salesforce
+2026-07-10 23:18:27.708 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [2/3] Procesando...
+2026-07-10 23:18:27.709 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:18:27.871 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Programador Junior Odoo...
+2026-07-10 23:18:28.508 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Programador Junior Odoo
+2026-07-10 23:18:28.509 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [3/3] Procesando...
+2026-07-10 23:18:28.509 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:18:28.678 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Programador ODOO - Urgente/Disponibilidad inmediat...
+2026-07-10 23:18:29.317 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Programador ODOO - Urgente/Disponibilidad inmediata
+2026-07-10 23:18:31.765 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 23:18:31.766 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 23:18:31.766 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:18:31.766 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 23:18:31.766 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 23:18:31.766 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 23:18:31.766 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 23:18:31.767 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 23:18:31.767 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 3
+2026-07-10 23:18:31.767 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 23:18:31.767 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 25.57 segundos
+2026-07-10 23:18:31.767 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 23:18:31.767 | INFO     | __main__:ejecutar_pipeline:152 - 
+📋 Últimas ofertas procesadas:
+2026-07-10 23:18:31.767 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Salesforce (Computrabajo)
+2026-07-10 23:18:31.767 | INFO     | __main__:ejecutar_pipeline:154 -    - Programador Junior Odoo (Computrabajo)
+2026-07-10 23:18:31.767 | INFO     | __main__:ejecutar_pipeline:154 -    - Programador ODOO - Urgente/Disponibilidad inmediata (Computrabajo)
+2026-07-10 23:18:31.768 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 23:18:31.768 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 23:18:31.768 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 23:20:25.690 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:20:25.691 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:20:25.691 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:20:25
+2026-07-10 23:20:25.691 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:20:25.691 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:20:26.669 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:20:26.670 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:20:27.954 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:20:27.954 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:20:27.955 | INFO     | scrapers.computrabajo_scraper:__init__:26 - ✅ ComputrabajoScraper inicializado con Paginación Dinámica
+2026-07-10 23:20:27.955 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:20:27.955 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:20:27.955 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:20:27.955 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:20:27.955 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 23:20:29.521 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 23:20:29.522 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:55 - 🚀 Navegando a la URL inicial: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 23:21:20.627 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:78 - 📄 Página 1: Detectadas 20 ofertas potenciales.
+2026-07-10 23:21:20.627 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:91 - 📦 [1/3] Cargando detalle en pestaña nueva: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:21:23.268 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:126 - ✅ [1] Extraídos 4697 caracteres exitosamente.
+2026-07-10 23:21:23.336 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:91 - 📦 [2/3] Cargando detalle en pestaña nueva: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:21:25.781 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:126 - ✅ [2] Extraídos 6176 caracteres exitosamente.
+2026-07-10 23:21:25.845 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:91 - 📦 [3/3] Cargando detalle en pestaña nueva: https://pe.computrabajo.com/ofertas-de-trabajo/oferta-de-tra...
+2026-07-10 23:21:28.264 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:126 - ✅ [3] Extraídos 5621 caracteres exitosamente.
+2026-07-10 23:21:28.335 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:160 - 📌 Total acumulado finalizado: 3 ofertas
+2026-07-10 23:21:28.335 | INFO     | __main__:ejecutar_pipeline:81 - 🧠 Computrabajo: Procesando 3 ofertas...
+2026-07-10 23:21:28.335 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [1/3] Procesando...
+2026-07-10 23:21:28.336 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:21:28.515 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Programador / Analista de Sistemas - Cercado de Li...
+2026-07-10 23:21:29.243 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Programador / Analista de Sistemas - Cercado de Lima
+2026-07-10 23:21:29.243 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [2/3] Procesando...
+2026-07-10 23:21:29.244 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:21:29.462 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Java + Quarkus...
+2026-07-10 23:21:30.104 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Desarrollador Java + Quarkus
+2026-07-10 23:21:30.104 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [3/3] Procesando...
+2026-07-10 23:21:30.105 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:21:30.290 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Programador Senior full stack...
+2026-07-10 23:21:30.915 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Programador Senior full stack
+2026-07-10 23:21:33.275 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 23:21:33.275 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 23:21:33.276 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:21:33.276 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 23:21:33.276 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 23:21:33.276 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 23:21:33.276 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 23:21:33.277 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 23:21:33.277 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 3
+2026-07-10 23:21:33.277 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 23:21:33.277 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 67.58 segundos
+2026-07-10 23:21:33.277 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 23:21:33.277 | INFO     | __main__:ejecutar_pipeline:152 - 
+📋 Últimas ofertas procesadas:
+2026-07-10 23:21:33.277 | INFO     | __main__:ejecutar_pipeline:154 -    - Programador / Analista de Sistemas - Cercado de Lima (Computrabajo)
+2026-07-10 23:21:33.277 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Java + Quarkus (Computrabajo)
+2026-07-10 23:21:33.278 | INFO     | __main__:ejecutar_pipeline:154 -    - Programador Senior full stack (Computrabajo)
+2026-07-10 23:21:33.278 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 23:21:33.278 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 23:21:33.278 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 23:25:44.668 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:25:44.669 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:25:44.669 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:25:44
+2026-07-10 23:25:44.669 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:25:44.670 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:25:45.681 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:25:45.681 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:25:47.298 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:25:47.298 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:25:47.298 | INFO     | scrapers.computrabajo_scraper:__init__:26 - ✅ ComputrabajoScraper inicializado con Paginación Dinámica
+2026-07-10 23:25:47.298 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:25:47.299 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:25:47.299 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:25:47.299 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:25:47.299 | ERROR    | __main__:ejecutar_pipeline:133 - ❌ Error procesando Computrabajo: 'ComputrabajoScraper' object has no attribute 'recolectar_ofertas'
+2026-07-10 23:25:47.299 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 23:25:47.299 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:25:47.299 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 23:25:47.300 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 23:25:47.300 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 23:25:47.300 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 23:25:47.300 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 23:25:47.300 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 0
+2026-07-10 23:25:47.300 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 23:25:47.300 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 2.63 segundos
+2026-07-10 23:25:47.300 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 23:25:47.300 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 23:25:47.301 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 23:25:47.301 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 23:26:01.838 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:26:01.839 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:26:01.839 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:26:01
+2026-07-10 23:26:01.839 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:26:01.840 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:26:02.738 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:26:02.739 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:26:04.230 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:26:04.230 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:26:04.230 | INFO     | scrapers.computrabajo_scraper:__init__:26 - ✅ ComputrabajoScraper inicializado con Paginación Dinámica
+2026-07-10 23:26:04.230 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:26:04.230 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:26:04.231 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:26:04.231 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:26:04.231 | ERROR    | __main__:ejecutar_pipeline:133 - ❌ Error procesando Computrabajo: 'ComputrabajoScraper' object has no attribute 'recolectar_ofertas'
+2026-07-10 23:26:04.231 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 23:26:04.231 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:26:04.231 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 23:26:04.231 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 23:26:04.232 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 23:26:04.232 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 23:26:04.232 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 23:26:04.232 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 0
+2026-07-10 23:26:04.232 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 23:26:04.233 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 2.39 segundos
+2026-07-10 23:26:04.233 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 23:26:04.233 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 23:26:04.233 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 23:26:04.233 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 23:26:51.424 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:26:51.426 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:26:51.427 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:26:51
+2026-07-10 23:26:51.427 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:26:51.427 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:26:52.330 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:26:52.330 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:26:53.589 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:26:53.590 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:26:53.590 | INFO     | scrapers.computrabajo_scraper:__init__:26 - ✅ ComputrabajoScraper inicializado con Paginación Dinámica
+2026-07-10 23:26:53.590 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:26:53.590 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:26:53.590 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:26:53.590 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:26:53.591 | ERROR    | __main__:ejecutar_pipeline:133 - ❌ Error procesando Computrabajo: 'ComputrabajoScraper' object has no attribute 'recolectar_ofertas'
+2026-07-10 23:26:53.591 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 23:26:53.591 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:26:53.591 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 23:26:53.591 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 23:26:53.591 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 23:26:53.591 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 23:26:53.592 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 23:26:53.592 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 0
+2026-07-10 23:26:53.592 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 23:26:53.592 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 2.16 segundos
+2026-07-10 23:26:53.592 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 23:26:53.592 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 23:26:53.592 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 23:26:53.593 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 23:29:29.860 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:29:29.861 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:29:29.861 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:29:29
+2026-07-10 23:29:29.861 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:29:29.862 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:29:30.813 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:29:30.813 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:29:32.295 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:29:32.295 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:29:32.295 | INFO     | scrapers.computrabajo_scraper:__init__:26 - ✅ ComputrabajoScraper inicializado con Paginación Dinámica
+2026-07-10 23:29:32.295 | INFO     | scrapers.base_scraper:__init__:32 - ✅ BaseScraper inicializado
+2026-07-10 23:29:32.296 | INFO     | scrapers.linkedin_scraper:__init__:18 - ✅ LinkedInScraper inicializado
+2026-07-10 23:29:32.296 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: Computrabajo
+2026-07-10 23:29:32.296 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:29:32.296 | INFO     | scrapers.base_scraper:iniciar_navegador:36 - 🌐 Configurando navegador Chrome...
+2026-07-10 23:29:33.962 | INFO     | scrapers.base_scraper:iniciar_navegador:59 - ✅ Navegador iniciado con éxito
+2026-07-10 23:29:33.962 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:57 - 🚀 Navegando a la URL inicial: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 23:29:37.885 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:75 - 📄 Página 1: Detectadas 20 ofertas potenciales.
+2026-07-10 23:29:37.885 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:88 - 📦 [1/3] Abriendo pestaña: https://pe.computrabajo.com/ofertas-de-t...
+2026-07-10 23:29:39.068 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:88 - 📦 [2/3] Abriendo pestaña: https://pe.computrabajo.com/ofertas-de-t...
+2026-07-10 23:29:40.250 | DEBUG    | scrapers.computrabajo_scraper:recolectar_ofertas:88 - 📦 [3/3] Abriendo pestaña: https://pe.computrabajo.com/ofertas-de-t...
+2026-07-10 23:29:41.435 | INFO     | scrapers.computrabajo_scraper:recolectar_ofertas:145 - 📌 Total acumulado finalizado: 3 ofertas
+2026-07-10 23:29:41.435 | INFO     | __main__:ejecutar_pipeline:81 - 🧠 Computrabajo: Procesando 3 ofertas...
+2026-07-10 23:29:41.435 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [1/3] Procesando...
+2026-07-10 23:29:41.436 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:29:41.577 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Junior...
+2026-07-10 23:29:42.194 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Desarrollador Junior
+2026-07-10 23:29:42.194 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [2/3] Procesando...
+2026-07-10 23:29:42.195 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:29:42.430 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Java + Quarkus...
+2026-07-10 23:29:43.065 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Desarrollador Java + Quarkus
+2026-07-10 23:29:43.065 | INFO     | __main__:ejecutar_pipeline:85 -    🔄 [3/3] Procesando...
+2026-07-10 23:29:43.066 | DEBUG    | nlp.ai_extractor:extraer_datos_oferta:113 - 🔍 Extrayendo entidades del texto...
+2026-07-10 23:29:43.247 | SUCCESS  | __main__:ejecutar_pipeline:127 -       ✅ Desarrollador Junior Unity...
+2026-07-10 23:29:43.833 | INFO     | storage.sheets_handler:guardar_oferta:137 - 💾 Oferta guardada: Desarrollador Junior Unity
+2026-07-10 23:29:46.250 | INFO     | scrapers.base_scraper:cerrar_navegador:100 - 🔒 Navegador cerrado de forma segura
+2026-07-10 23:29:46.251 | INFO     | __main__:ejecutar_pipeline:71 - 
+📌 PROCESANDO PORTAL: LinkedIn
+2026-07-10 23:29:46.251 | INFO     | __main__:ejecutar_pipeline:72 - ----------------------------------------
+2026-07-10 23:29:46.251 | WARNING  | scrapers.linkedin_scraper:recolectar_ofertas:22 - ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 23:29:46.251 | WARNING  | __main__:ejecutar_pipeline:78 - ⚠️ No se obtuvieron ofertas de LinkedIn
+2026-07-10 23:29:46.251 | INFO     | __main__:ejecutar_pipeline:143 - 
+============================================================
+2026-07-10 23:29:46.251 | INFO     | __main__:ejecutar_pipeline:144 - 📊 RESUMEN DE EJECUCIÓN
+2026-07-10 23:29:46.252 | INFO     | __main__:ejecutar_pipeline:145 - ============================================================
+2026-07-10 23:29:46.252 | INFO     | __main__:ejecutar_pipeline:146 -    📌 Total ofertas extraídas: 3
+2026-07-10 23:29:46.252 | INFO     | __main__:ejecutar_pipeline:147 -    📌 Portales procesados: 2
+2026-07-10 23:29:46.252 | INFO     | __main__:ejecutar_pipeline:148 -    ⏱️  Tiempo total: 16.39 segundos
+2026-07-10 23:29:46.252 | INFO     | __main__:ejecutar_pipeline:149 -    💾 Datos guardados en: Laboral_AI_Scraper_Data
+2026-07-10 23:29:46.252 | INFO     | __main__:ejecutar_pipeline:152 - 
+📋 Últimas ofertas procesadas:
+2026-07-10 23:29:46.252 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Junior (Computrabajo)
+2026-07-10 23:29:46.253 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Java + Quarkus (Computrabajo)
+2026-07-10 23:29:46.253 | INFO     | __main__:ejecutar_pipeline:154 -    - Desarrollador Junior Unity (Computrabajo)
+2026-07-10 23:29:46.253 | INFO     | __main__:ejecutar_pipeline:156 - ============================================================
+2026-07-10 23:29:46.253 | INFO     | __main__:ejecutar_pipeline:157 - ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 23:29:46.253 | INFO     | __main__:ejecutar_pipeline:158 - ============================================================
+2026-07-10 23:37:07.371 | INFO     | __main__:ejecutar_pipeline:27 - ============================================================
+2026-07-10 23:37:07.372 | INFO     | __main__:ejecutar_pipeline:28 - 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:37:07.372 | INFO     | __main__:ejecutar_pipeline:29 - 📅 Fecha: 2026-07-10 23:37:07
+2026-07-10 23:37:07.372 | INFO     | __main__:ejecutar_pipeline:30 - ============================================================
+2026-07-10 23:37:07.372 | INFO     | nlp.ai_extractor:__init__:22 - 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:37:08.377 | INFO     | nlp.ai_extractor:__init__:27 - ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:37:08.378 | INFO     | storage.sheets_handler:_conectar_google_api:26 - 🔑 Conectando con API de Google Drive...
+2026-07-10 23:37:10.278 | INFO     | storage.sheets_handler:_conectar_google_api:36 - ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:41:16 | INFO     | ============================================================
+2026-07-10 23:41:16 | INFO     | 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:41:16 | INFO     | 📅 Fecha: 2026-07-10 23:41:16
+2026-07-10 23:41:16 | INFO     | ============================================================
+2026-07-10 23:41:16 | INFO     | 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:41:17 | INFO     | ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:41:17 | INFO     | 🔑 Conectando con API de Google Drive...
+2026-07-10 23:41:19 | INFO     | ✅ Conectado a: 'Laboral_AI_Scraper_Data'
+2026-07-10 23:42:35 | INFO     | ============================================================
+2026-07-10 23:42:35 | INFO     | 🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI
+2026-07-10 23:42:35 | INFO     | 📅 Fecha: 2026-07-10 23:42:35
+2026-07-10 23:42:35 | INFO     | ============================================================
+2026-07-10 23:42:35 | INFO     | 📦 Cargando modelo base en español: es_core_news_md...
+2026-07-10 23:42:36 | INFO     | ✅ AIExtractor inicializado. Etiquetas: ['REQUISITO', 'BENEFICIO', 'MODALIDAD', 'EMPRESA', 'UBICACION']
+2026-07-10 23:42:36 | ERROR    | ❌ Error crítico de conexión a Google Sheets: No se encontró el archivo de credenciales en: credentials.json
+2026-07-10 23:42:36 | WARNING  | ⚠️ No hay conexión activa a Sheets. Usando búsqueda por defecto: ['programador']
+2026-07-10 23:42:36 | INFO     | ✅ BaseScraper inicializado
+2026-07-10 23:42:36 | INFO     | ✅ ComputrabajoScraper inicializado con Paginación Dinámica
+2026-07-10 23:42:36 | INFO     | ✅ BaseScraper inicializado
+2026-07-10 23:42:36 | INFO     | ✅ LinkedInScraper inicializado
+2026-07-10 23:42:36 | INFO     | 
+🔎 BUSCANDO VACANTES PARA: PROGRAMADOR
+2026-07-10 23:42:36 | INFO     | 
+📌 PROCESANDO PORTAL: Computrabajo (PROGRAMADOR)
+2026-07-10 23:42:36 | INFO     | ----------------------------------------
+2026-07-10 23:42:36 | INFO     | 🌐 Configurando navegador Chrome...
+2026-07-10 23:42:38 | INFO     | ✅ Navegador iniciado con éxito
+2026-07-10 23:42:38 | INFO     | 🚀 Navegando a la URL inicial: https://pe.computrabajo.com/trabajo-de-programador-en-lima
+2026-07-10 23:42:42 | INFO     | 📄 Página 1: Detectadas 20 ofertas potenciales.
+2026-07-10 23:42:42 | DEBUG    | 📦 [1/3] Abriendo pestaña: https://pe.computrabajo.com/ofertas-de-t...
+2026-07-10 23:42:43 | DEBUG    | 📦 [2/3] Abriendo pestaña: https://pe.computrabajo.com/ofertas-de-t...
+2026-07-10 23:42:45 | DEBUG    | 📦 [3/3] Abriendo pestaña: https://pe.computrabajo.com/ofertas-de-t...
+2026-07-10 23:42:46 | INFO     | 📌 Total acumulado finalizado: 3 ofertas
+2026-07-10 23:42:46 | INFO     | 🧠 Computrabajo: Procesando 3 ofertas crudas...
+2026-07-10 23:42:46 | INFO     |    🔄 [1/3] Procesando...
+2026-07-10 23:42:46 | DEBUG    | 🔍 Extrayendo entidades del texto...
+2026-07-10 23:42:46 | WARNING  | ⚠️ No se pueden guardar datos porque no hay una pestaña principal vinculada.
+2026-07-10 23:42:46 | SUCCESS  |      ✅ Oferta indexada y guardada: Desarrollador Odoo / Miraflores - Planil...
+2026-07-10 23:42:46 | INFO     |    🔄 [2/3] Procesando...
+2026-07-10 23:42:46 | DEBUG    | 🔍 Extrayendo entidades del texto...
+2026-07-10 23:42:46 | WARNING  | ⚠️ No se pueden guardar datos porque no hay una pestaña principal vinculada.
+2026-07-10 23:42:46 | SUCCESS  |      ✅ Oferta indexada y guardada: analista programador...
+2026-07-10 23:42:46 | INFO     |    🔄 [3/3] Procesando...
+2026-07-10 23:42:46 | DEBUG    | 🔍 Extrayendo entidades del texto...
+2026-07-10 23:42:46 | WARNING  | ⚠️ No se pueden guardar datos porque no hay una pestaña principal vinculada.
+2026-07-10 23:42:46 | SUCCESS  |      ✅ Oferta indexada y guardada: Desarrollador Junior...
+2026-07-10 23:42:46 | INFO     | 
+📌 PROCESANDO PORTAL: LinkedIn (PROGRAMADOR)
+2026-07-10 23:42:46 | INFO     | ----------------------------------------
+2026-07-10 23:42:46 | WARNING  | ⚠️ El scraper de LinkedIn está en modo simulación (Falta evadir login).
+2026-07-10 23:42:46 | WARNING  | ⚠️ No se obtuvieron ofertas de LinkedIn para 'programador'
+2026-07-10 23:42:46 | INFO     | 
+🔒 Cerrando conexiones de navegadores de forma segura...
+2026-07-10 23:42:49 | INFO     | 🔒 Navegador cerrado de forma segura
+2026-07-10 23:42:49 | INFO     | 
+============================================================
+2026-07-10 23:42:49 | INFO     | 📊 RESUMEN DE EJECUCIÓN TOTAL
+2026-07-10 23:42:49 | INFO     | ============================================================
+2026-07-10 23:42:49 | INFO     |    📌 Total ofertas extraídas y guardadas: 3
+2026-07-10 23:42:49 | INFO     |    📌 Puestos/Búsquedas dinámicas leídas: 1
+2026-07-10 23:42:49 | INFO     |    ⏱️  Tiempo total: 13.63 segundos
+2026-07-10 23:42:49 | INFO     |    💾 Base de datos unificada en Sheets: Simulación local
+2026-07-10 23:42:49 | INFO     | 
+📋 Resumen de las últimas ofertas procesadas:
+2026-07-10 23:42:49 | INFO     |    - Desarrollador Odoo / Miraflores - Planilla directa / Ingreso inmediato (Computrabajo)
+2026-07-10 23:42:49 | INFO     |    - analista programador (Computrabajo)
+2026-07-10 23:42:49 | INFO     |    - Desarrollador Junior (Computrabajo)
+2026-07-10 23:42:49 | INFO     | ============================================================
+2026-07-10 23:42:49 | INFO     | ✅ PIPELINE COMPLETADO EXITOSAMENTE
+2026-07-10 23:42:49 | INFO     | ============================================================
