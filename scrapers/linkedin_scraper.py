@@ -1,139 +1,138 @@
-# ============================================================================
-# Módulo: scrapers/linkedin_scraper.py
-# ============================================================================
-
+"""
+Módulo: scrapers/linkedin_scraper.py (Migrado a Playwright)
+============================================================================
+"""
 import time
 import urllib.parse
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
 from scrapers.base_scraper import BaseScraper
 from loguru import logger
 
 class LinkedInScraper(BaseScraper):
-    """Scraper específico para LinkedIn usando URLs paginadas y expansión de texto"""
-    
+    """Scraper específico para LinkedIn usando Playwright"""
     def __init__(self):
         super().__init__()
         self.plataforma = "LinkedIn"
-        logger.info("✅ LinkedInScraper inicializado")
+        logger.info("✅ LinkedInScraper (Playwright) inicializado")
 
     def _destruir_modales(self):
-        """Usa JavaScript para eliminar cualquier cuadro de login que bloquee la pantalla"""
+        """Elimina modales de login."""
         try:
-            self.driver.execute_script("""
+            self.page.evaluate("""
                 document.querySelectorAll('[role="dialog"], .modal, .contextual-sign-in-modal').forEach(e => e.remove());
                 document.body.style.overflow = 'auto';
             """)
-            logger.debug("🧹 Modales de login destruidos por JS.")
         except Exception:
             pass
 
-    def recolectar_ofertas(self, url_semilla: str, limite_ofertas: int = 20, puesto: str = "practicante", lugar: str = "peru", filtro_relevancia_cb=None) -> list:
-        if not self.driver:
-            self.iniciar_navegador()
-
+    def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
+                          puesto: str = "practicante", lugar: str = "peru", 
+                          filtro_relevancia_cb=None) -> list:
+        """Recolecta ofertas de LinkedIn."""
+        if not self.page:
+            self.iniciar_navegador(headless=True)
+            
         ofertas_recopiladas = []
-        
-        # Validar que no lleguen vacíos
-        puesto_seguro = puesto if puesto else "practicante"
-        lugar_seguro = lugar if lugar else "peru"
-        
-        puesto_url = urllib.parse.quote(puesto_seguro)
-        lugar_url = urllib.parse.quote(lugar_seguro)
-        
-        offset = 0 
+        puesto_url = urllib.parse.quote(puesto)
+        lugar_url = urllib.parse.quote(lugar)
+        offset = 0
         paginas_revisadas = 0
-        max_paginas = 2 # Límite para pruebas rápidas
+        max_paginas = 5
         
-        while len(ofertas_recopiladas) < limite_ofertas and paginas_revisadas < max_paginas:
-            url_busqueda = f"https://www.linkedin.com/jobs/search/?keywords={puesto_url}&location={lugar_url}&start={offset}"
-            
-            logger.info(f"🚀 LinkedIn (Pág {paginas_revisadas + 1}): {url_busqueda}")
-            self.driver.get(url_busqueda)
-            time.sleep(3) 
-            
-            self._destruir_modales()
-            
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
-            
-            # Ampliamos los selectores para agarrar bien las tarjetas
-            tarjetas = self.driver.find_elements(By.CSS_SELECTOR, "div.base-card, div.job-search-card, li.jobs-search-results__list-item, div.job-card-container")
-            
-            if not tarjetas:
-                logger.warning("⚠️ No se encontraron tarjetas en esta página.")
-                break
+        try:
+            while len(ofertas_recopiladas) < limite_ofertas and paginas_revisadas < max_paginas:
+                url_busqueda = f"https://www.linkedin.com/jobs/search/?keywords={puesto_url}&location={lugar_url}&start={offset}"
+                logger.info(f" LinkedIn (Pág {paginas_revisadas + 1}): {url_busqueda}")
                 
-            for elem in tarjetas:
-                if len(ofertas_recopiladas) >= limite_ofertas:
+                self.navegar_a(url_busqueda)
+                time.sleep(3)
+                self._destruir_modales()
+                
+                # Scroll
+                self.scroll_al_final()
+                time.sleep(2)
+                
+                # Buscar tarjetas
+                tarjetas = self.obtener_elementos("div.base-card, div.job-search-card, li.jobs-search-results__list-item")
+                count = tarjetas.count()
+                
+                if count == 0:
+                    logger.warning("⚠️ No hay tarjetas en esta página")
                     break
-                    
-                try:
+                
+                logger.info(f"📦 {count} tarjetas encontradas")
+                
+                # Procesar tarjetas
+                for i in range(min(count, limite_ofertas - len(ofertas_recopiladas))):
                     try:
-                        enlace_elem = elem.find_element(By.CSS_SELECTOR, "a.base-card__full-link, a.job-card-container__link, a.job-card-list__title, a")
-                        href = enlace_elem.get_attribute("href")
-                        titulo_lista = enlace_elem.text.strip()
-                    except NoSuchElementException:
-                        continue
+                        tarjeta = tarjetas.nth(i)
                         
-                    if not href or "job" not in href.lower():
-                        continue
-                        
-                    if any(o['link_oferta'] == href for o in ofertas_recopiladas):
-                        continue
-                        
-                    if filtro_relevancia_cb and not filtro_relevancia_cb(titulo_lista, puesto_seguro):
-                        continue
-                        
-                    logger.debug(f"📦 Abriendo vacante: {titulo_lista[:35]}...")
-                    self.driver.execute_script(f"window.open('{href}', '_blank');")
-                    self.driver.switch_to.window(self.driver.window_handles[-1])
-                    time.sleep(3)
-                    
-                    self._destruir_modales()
-                    
-                    # =========================================================
-                    # ⚡ EL BLOQUE MÁGICO: CLIC EN "VER MÁS" Y EXTRACCIÓN COMPLETA
-                    # =========================================================
-                    try:
-                        # 1. Intentar hacer clic en el botón "Ver más"
+                        # Obtener enlace
                         try:
-                            btn_ver_mas = self.driver.find_element(By.CSS_SELECTOR, "button.show-more-less-html__button, button.jobs-description__footer-button")
-                            self.driver.execute_script("arguments[0].click();", btn_ver_mas)
-                            time.sleep(1.5) # Espera a que el texto baje
-                        except NoSuchElementException:
-                            pass # Si no hay botón, continuamos normal
-                            
-                        # 2. Capturar TODO EL CONTENEDOR CENTRAL (Encabezado con Empresa + Descripción)
-                        # Usamos 'main' o 'section.core-rail' para agarrar la oferta entera sin el menú superior
-                        cuerpo = self.driver.find_element(By.CSS_SELECTOR, "main, section.core-rail")
-                        texto_crudo = cuerpo.text
-                        
-                    except NoSuchElementException:
-                        logger.debug("⚠️ No se encontró 'main', usando respaldo (body)...")
-                        try:
-                            cuerpo = self.driver.find_element(By.TAG_NAME, "body")
-                            texto_crudo = cuerpo.text
+                            enlace = tarjeta.locator("a.base-card__full-link, a").first
+                            href = enlace.get_attribute("href")
+                            titulo = enlace.inner_text().strip()
                         except:
-                            texto_crudo = ""
-                    # =========================================================
-                    
-                    if texto_crudo and len(texto_crudo) > 100:
-                        ofertas_recopiladas.append({
-                            "link_oferta": href,
-                            "plataforma_origen": self.plataforma,
-                            "texto_crudo": texto_crudo,
-                            "titulo_puesto": titulo_lista
-                        })
+                            continue
                         
-                except Exception as e:
-                    pass
-                finally:
-                    if len(self.driver.window_handles) > 1:
-                        self.driver.close()
-                        self.driver.switch_to.window(self.driver.window_handles[0])
-            
-            offset += 25
-            paginas_revisadas += 1
-            
+                        if not href or "job" not in href.lower():
+                            continue
+                        
+                        # Verificar duplicados
+                        if any(o['link_oferta'] == href for o in ofertas_recopiladas):
+                            continue
+                        
+                        # Filtro de relevancia
+                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
+                            continue
+                        
+                        # Abrir oferta
+                        self.page.evaluate(f"window.open('{href}', '_blank')")
+                        self.page.wait_for_timeout(1000)
+                        
+                        # Cambiar a nueva pestaña
+                        self.page = self.page.context.pages[-1]
+                        time.sleep(3)
+                        self._destruir_modales()
+                        
+                        # Click en "Ver más"
+                        try:
+                            btn_ver_mas = self.page.locator("button.show-more-less-html__button").first
+                            btn_ver_mas.click()
+                            time.sleep(1.5)
+                        except:
+                            pass
+                        
+                        # Extraer texto
+                        try:
+                            cuerpo = self.page.locator("main, section.core-rail").first
+                            texto_crudo = cuerpo.inner_text()
+                        except:
+                            texto_crudo = self.obtener_texto_pagina()
+                        
+                        if texto_crudo and len(texto_crudo) > 100:
+                            ofertas_recopiladas.append({
+                                "link_oferta": href,
+                                "plataforma_origen": self.plataforma,
+                                "texto_crudo": texto_crudo,
+                                "titulo_puesto": titulo
+                            })
+                            logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:40]}...")
+                        
+                        # Cerrar y volver
+                        self.page.close()
+                        self.page = self.page.context.pages[0]
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Error en tarjeta {i}: {e}")
+                        if len(self.page.context.pages) > 1:
+                            self.page.close()
+                            self.page = self.page.context.pages[0]
+                
+                offset += 25
+                paginas_revisadas += 1
+                
+        except Exception as e:
+            logger.error(f"❌ Error crítico LinkedIn: {e}")
+        
+        logger.info(f"✅ Total LinkedIn: {len(ofertas_recopiladas)} ofertas")
         return ofertas_recopiladas
