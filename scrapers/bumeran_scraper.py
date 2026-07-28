@@ -1,6 +1,5 @@
 """
 Módulo: scrapers/bumeran_scraper.py (Migrado a Playwright)
-============================================================================
 """
 import time
 from scrapers.base_scraper import BaseScraper
@@ -38,7 +37,7 @@ class BumeranScraper(BaseScraper):
             while len(ofertas_recopiladas) < limite_ofertas:
                 if pagina_actual == 1:
                     url_busqueda = f"https://www.bumeran.com.pe/empleos-busqueda-{puesto_slug}.html"
-                    logger.info(f" Bumeran (Pág 1): {url_busqueda}")
+                    logger.info(f"🔍 Bumeran (Pág 1): {url_busqueda}")
                     
                     self.navegar_a(url_busqueda)
                     time.sleep(3)
@@ -50,17 +49,17 @@ class BumeranScraper(BaseScraper):
                             input_lugar = self.page.locator("input[aria-label='Lugar de trabajo']").first
                             input_lugar.fill(lugar.capitalize())
                             self.page.keyboard.press("Enter")
-                            time.sleep(3)  # Esperar actualización
+                            time.sleep(3)
                             logger.info(f"📍 Filtro de ubicación aplicado: {lugar}")
                         except Exception as e:
-                            logger.warning(f"⚠️ No se pudo aplicar filtro de ubicación: {e}")
+                            logger.warning(f"️ No se pudo aplicar filtro de ubicación: {e}")
                 else:
                     # Paginación via URL
                     try:
                         url_actual = self.page.url
+                        import re
                         if "page=" in url_actual:
-                            import re
-                            nueva_url = re.sub(r'([?&])page=\\d+', rf'\\g<1>page={pagina_actual}', url_actual)
+                            nueva_url = re.sub(r'([?&])page=\d+', rf'\g<1>page={pagina_actual}', url_actual)
                         else:
                             conector = "&" if "?" in url_actual else "?"
                             nueva_url = f"{url_actual}{conector}page={pagina_actual}"
@@ -81,23 +80,27 @@ class BumeranScraper(BaseScraper):
                 count = enlaces.count()
                 
                 if count == 0:
-                    logger.warning(f"⚠️ No hay ofertas en página {pagina_actual}")
+                    logger.warning(f"️ No hay ofertas en página {pagina_actual}")
                     break
                 
-                logger.info(f"📦 {count} enlaces encontrados")
+                logger.info(f" {count} enlaces encontrados")
                 
                 # Procesar ofertas
                 for i in range(min(count, limite_ofertas - len(ofertas_recopiladas))):
                     try:
                         enlace = enlaces.nth(i)
                         href = enlace.get_attribute("href")
-                        texto_tarjeta = enlace.inner_text()
                         
+                        # ✅ FIX: Completar URL si es relativa
+                        if href and not href.startswith("http"):
+                            href = f"https://www.bumeran.com.pe{href}"
+                        
+                        texto_tarjeta = enlace.inner_text()
                         if not href or "busqueda" in href:
                             continue
                         
                         # Limpiar título
-                        lineas = [l.strip() for l in texto_tarjeta.split('\\n') if l.strip()]
+                        lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip()]
                         if not lineas:
                             continue
                         
@@ -106,7 +109,6 @@ class BumeranScraper(BaseScraper):
                         # Verificar duplicados y filtro
                         if any(o['link_oferta'] == href for o in ofertas_recopiladas):
                             continue
-                        
                         if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
                             continue
                         
@@ -119,8 +121,12 @@ class BumeranScraper(BaseScraper):
                         time.sleep(2)
                         self._destruir_modales()
                         
-                        # Extraer texto
-                        texto_crudo = self.obtener_texto_pagina()
+                        # ✅ FIX: Extraer solo el contenedor principal
+                        try:
+                            cuerpo = self.page.locator("main, section, div.job-description").first
+                            texto_crudo = cuerpo.inner_text()[:2000]
+                        except:
+                            texto_crudo = self.obtener_texto_pagina()[:2000]
                         
                         if texto_crudo and len(texto_crudo) > 100:
                             ofertas_recopiladas.append({
