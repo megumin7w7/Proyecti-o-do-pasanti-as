@@ -1,5 +1,6 @@
 import time
 import platform
+import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -11,7 +12,6 @@ from loguru import logger
 import sys
 import os
 
-# Agregar raíz del proyecto al path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.settings import HEADLESS_MODE, TIMEOUT_SECONDS
 
@@ -22,6 +22,25 @@ class BaseScraper:
         self.wait = None
         self.logger = logger
         self.logger.info("✅ BaseScraper inicializado")
+
+    def _encontrar_chromedriver(self):
+        """Busca chromedriver en rutas comunes de Linux."""
+        rutas_posibles = [
+            '/usr/bin/chromedriver',
+            '/usr/local/bin/chromedriver',
+            '/snap/bin/chromedriver',
+            '/usr/lib/chromium-browser/chromedriver',
+            '/usr/lib/chromium/chromedriver'
+        ]
+        
+        for ruta in rutas_posibles:
+            if os.path.exists(ruta):
+                self.logger.info(f"🔍 Chromedriver encontrado en: {ruta}")
+                return ruta
+        
+        # Si no lo encuentra, usar webdriver-manager
+        self.logger.info("️ Chromedriver no encontrado en rutas del sistema, usando webdriver-manager")
+        return ChromeDriverManager().install()
 
     def iniciar_navegador(self):
         """Inicializa el navegador Chrome con configuraciones antibloqueo."""
@@ -38,10 +57,12 @@ class BaseScraper:
         
         # 2. 🚨 FIX CRÍTICO PARA RENDER (LINUX)
         if platform.system() == "Linux":
-            # Forzar el uso del binario de Chromium instalado por packages.txt
             chrome_options.binary_location = '/usr/bin/chromium'
-            service = Service('/usr/bin/chromedriver')
             self.logger.info("🐧 Entorno Linux detectado: Usando /usr/bin/chromium")
+            
+            # Buscar chromedriver automáticamente
+            driver_path = self._encontrar_chromedriver()
+            service = Service(driver_path)
         else:
             # Windows / Mac local
             service = Service(ChromeDriverManager().install())
@@ -75,7 +96,7 @@ class BaseScraper:
             self.logger.error(f"❌ Timeout al cargar {url}")
             return None
         except Exception as e:
-            self.logger.error(f"❌ Error al extraer de {url}: {e}")
+            self.logger.error(f" Error al extraer de {url}: {e}")
             return None
 
     def esperar_elemento(self, by, selector, timeout: int = None):
@@ -92,4 +113,4 @@ class BaseScraper:
             self.driver.quit()
             self.driver = None
             self.wait = None
-            self.logger.info("🔒 Navegador cerrado de forma segura")
+            self.logger.info(" Navegador cerrado de forma segura")
