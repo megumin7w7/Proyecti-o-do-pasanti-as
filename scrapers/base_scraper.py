@@ -8,9 +8,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from loguru import logger
-
 import sys
 import os
+
+# Agregar raíz del proyecto al path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.settings import HEADLESS_MODE, TIMEOUT_SECONDS
 
@@ -35,16 +36,21 @@ class BaseScraper:
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        # 2. 🚨 FIX CRÍTICO PARA RENDER: Indicar dónde está el binario de Chromium en Linux
+        # 2. 🚨 FIX CRÍTICO PARA RENDER (LINUX)
         if platform.system() == "Linux":
+            # Forzar el uso del binario de Chromium instalado por packages.txt
             chrome_options.binary_location = '/usr/bin/chromium'
+            service = Service('/usr/bin/chromedriver')
+            self.logger.info("🐧 Entorno Linux detectado: Usando /usr/bin/chromium")
+        else:
+            # Windows / Mac local
+            service = Service(ChromeDriverManager().install())
             
         # 3. Modo headless (sin interfaz gráfica)
         if HEADLESS_MODE:
             chrome_options.add_argument("--headless=new")
             
         # 4. Inicializar driver
-        service = Service(ChromeDriverManager().install())
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
         
         # 5. Configurar tiempos de espera
