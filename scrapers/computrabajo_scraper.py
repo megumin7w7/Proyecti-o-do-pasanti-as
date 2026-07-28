@@ -1,6 +1,5 @@
 """
 Módulo: scrapers/computrabajo_scraper.py (Migrado a Playwright)
-============================================================================
 """
 import time
 from scrapers.base_scraper import BaseScraper
@@ -27,9 +26,7 @@ class ComputrabajoScraper(BaseScraper):
 
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
                           puesto: str = None, lugar: str = None, filtro_relevancia_cb=None) -> list:
-        """
-        Recolecta ofertas de Computrabajo usando paginación dinámica.
-        """
+        """Recolecta ofertas de Computrabajo usando paginación dinámica."""
         if not self.page:
             self.iniciar_navegador(headless=True)
             
@@ -72,16 +69,16 @@ class ComputrabajoScraper(BaseScraper):
                     try:
                         oferta_elem = ofertas_locator.nth(i)
                         href = oferta_elem.get_attribute("href")
-                        titulo = oferta_elem.inner_text().strip()
                         
+                        # ✅ FIX: Completar URL si es relativa
+                        if href and not href.startswith("http"):
+                            href = f"https://pe.computrabajo.com{href}"
+                        
+                        titulo = oferta_elem.inner_text().strip()
                         if not href or not titulo:
                             continue
-                        
-                        # Verificar duplicados
                         if any(o['link_oferta'] == href for o in ofertas_recopiladas):
                             continue
-                        
-                        # Aplicar filtro de relevancia
                         if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
                             continue
                         
@@ -93,8 +90,12 @@ class ComputrabajoScraper(BaseScraper):
                         self.page = self.page.context.pages[-1]
                         time.sleep(1)
                         
-                        # Extraer texto completo
-                        texto_crudo = self.obtener_texto_pagina()
+                        # ✅ FIX: Extraer solo el contenedor principal, no todo el body
+                        try:
+                            cuerpo = self.page.locator("main, section.job-description, div.offer_requirements").first
+                            texto_crudo = cuerpo.inner_text()[:2000]  # Limitado a 2000 chars
+                        except:
+                            texto_crudo = self.obtener_texto_pagina()[:2000]
                         
                         if texto_crudo and len(texto_crudo) > 50:
                             ofertas_recopiladas.append({
@@ -111,7 +112,6 @@ class ComputrabajoScraper(BaseScraper):
                         
                     except Exception as e:
                         logger.error(f"❌ Error procesando oferta {i}: {e}")
-                        # Asegurar volver a la página principal
                         if len(self.page.context.pages) > 1:
                             self.page.close()
                             self.page = self.page.context.pages[0]
