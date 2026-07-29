@@ -1,5 +1,5 @@
 """
-Módulo: sheets_handler.py (Compatible con GitHub Actions y Local)
+Módulo: storage/sheets_handler.py (Diagnóstico detallado de credenciales)
 """
 import gspread
 from google.oauth2.service_account import Credentials
@@ -17,44 +17,48 @@ class SheetsHandler:
 
     def _conectar_google_api(self):
         """Se conecta usando Variable de Entorno (GitHub/Render) o archivo local."""
-        # 1. Intentar leer desde Variable de Entorno (GitHub Actions)
-        creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+        scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         
+        # 1. Intentar desde Variable de Entorno (GitHub Actions)
+        creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
         if creds_json:
             try:
                 logger.info("🔑 Conectando con Google Sheets (desde Variable de Entorno)...")
-                scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
                 creds_dict = json.loads(creds_json)
                 creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
                 self.client = gspread.authorize(creds)
                 self._abrir_o_crear_sheet()
                 return
             except Exception as e:
-                logger.error(f"❌ Error con Variable de Entorno: {e}")
-        
-        # 2. Fallback: Intentar leer desde archivo local (Desarrollo en tu PC)
+                logger.error(f"❌ Error al autenticar con GOOGLE_CREDENTIALS_JSON: {e}")
+
+        # 2. Intentar desde archivo local (Desarrollo en PC)
         if os.path.exists(CREDENTIALS_FILE):
             try:
-                logger.info("🔑 Conectando con Google Sheets (desde archivo local)...")
-                scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                logger.info(f"🔑 Conectando con Google Sheets (desde {CREDENTIALS_FILE})...")
                 creds = Credentials.from_service_account_file(CREDENTIALS_FILE, scopes=scopes)
                 self.client = gspread.authorize(creds)
                 self._abrir_o_crear_sheet()
                 return
             except Exception as e:
-                logger.error(f"❌ Error con archivo local: {e}")
-        
-        # 3. Si todo falla
+                logger.error(f"❌ Error al abrir archivo de credenciales local: {e}")
+
+        # 3. Si no hay nada configurado
         logger.warning("⚠️ No se encontraron credenciales válidas. Modo simulación activado.")
 
     def _abrir_o_crear_sheet(self):
         try:
             self.sheet = self.client.open(GOOGLE_SHEET_NAME)
-            logger.info(f"✅ Conectado a: '{GOOGLE_SHEET_NAME}'")
+            logger.info(f"✅ Conectado exitosamente a Google Sheet: '{GOOGLE_SHEET_NAME}'")
         except gspread.SpreadsheetNotFound:
-            logger.info(f"📄 Creando nuevo archivo: '{GOOGLE_SHEET_NAME}'")
-            self.sheet = self.client.create(GOOGLE_SHEET_NAME)
-            self._inicializar_estructura_hojas()
+            try:
+                logger.info(f"📄 No existe '{GOOGLE_SHEET_NAME}'. Creando uno nuevo...")
+                self.sheet = self.client.create(GOOGLE_SHEET_NAME)
+                self._inicializar_estructura_hojas()
+            except Exception as e:
+                logger.error(f"❌ No se pudo crear la hoja. Revisa los permisos de la API: {e}")
+        except Exception as e:
+            logger.error(f"❌ Error al acceder a '{GOOGLE_SHEET_NAME}': {e}. ¿Compartiste la hoja con el correo de la Service Account?")
 
     def _inicializar_estructura_hojas(self):
         if not self.sheet: return
@@ -65,7 +69,6 @@ class SheetsHandler:
             worksheet_config.append_row(["Puesto", "Lugar", "Activo", "Ultima_Ejecucion"])
             worksheet_config.append_row(["practicante de datos", "lima", "SI", "-"])
             
-            # ✅ 14 COLUMNAS (SIN 'nivel')
             try:
                 worksheet_ofertas = self.sheet.worksheet("Ofertas_Extraidas")
             except gspread.WorksheetNotFound:
@@ -78,9 +81,9 @@ class SheetsHandler:
                 "horario", "departamento", "area_categoria", 
                 "descripcion_breve", "requisitos", "beneficios"
             ])
-            logger.info("📊 Estructura de pestañas creada con éxito (14 columnas)")
+            logger.info("📊 Estructura de pestañas inicializada correctamente.")
         except Exception as e:
-            logger.error(f"❌ Error al estructurar hojas: {e}")
+            logger.error(f"❌ Error al estructurar pestañas: {e}")
 
     def obtener_busquedas_activas(self) -> list:
         if not self.sheet:
@@ -102,7 +105,6 @@ class SheetsHandler:
                 if puesto and activo == "SI":
                     busquedas_activas.append({"puesto": puesto, "lugar": lugar if lugar else "lima"})
             
-            logger.info(f"📋 Configuración: {len(busquedas_activas)} búsquedas activas encontradas.")
             return busquedas_activas if busquedas_activas else [{"puesto": "practicante de datos", "lugar": "lima"}]
         except Exception as e:
             logger.error(f"❌ Error leyendo configuración: {e}")
@@ -126,7 +128,6 @@ class SheetsHandler:
                     contador_duplicadas += 1
                     continue
                 
-                # ✅ Mapeo exacto a las 14 columnas (SIN 'nivel')
                 fila = [
                     payload.get("id_oferta"), payload.get("fecha_scraping"), payload.get("plataforma_origen"),
                     payload.get("link_oferta"), payload.get("titulo_puesto"), payload.get("empresa"),
@@ -148,7 +149,7 @@ class SheetsHandler:
             self._inicializar_estructura_hojas()
             return self.verificar_y_guardar(ofertas_del_scraper, nombre_scraper, puesto, lugar)
         except Exception as e:
-            logger.error(f"❌ Error crítico: {e}")
+            logger.error(f"❌ Error crítico guardando en Sheets: {e}")
             return {'guardadas': 0, 'duplicadas': 0, 'errores': len(ofertas_del_scraper)}
 
     def actualizar_estado(self, puesto: str, lugar: str):
@@ -162,10 +163,3 @@ class SheetsHandler:
                     break
         except Exception as e:
             logger.error(f"❌ Error actualizando estado: {e}")
-
-class SheetsHandlerSimulado:
-    def obtener_busquedas_activas(self): return [{"puesto": "practicante de datos", "lugar": "lima"}]
-    def verificar_y_guardar(self, ofertas_del_scraper: list, nombre_scraper: str, puesto: str, lugar: str) -> dict:
-        logger.info(f"🧪 Modo simulación: {len(ofertas_del_scraper)} ofertas no guardadas")
-        return {'guardadas': 0, 'duplicadas': 0, 'errores': 0}
-    def actualizar_estado(self, puesto: str, lugar: str): pass
