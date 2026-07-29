@@ -16,7 +16,7 @@ class SheetsHandlerSimulado:
     def __init__(self):
         logger.warning("⚠️ Modo Simulación de Sheets activo (Sin conexión real).")
 
-    def obtener_busquedas_activas((self) -> list:
+    def obtener_busquedas_activas(self) -> list:
         logger.info("📋 [Simulación] Usando búsqueda por defecto.")
         return [{"puesto": "practicante de datos", "lugar": "lima"}]
 
