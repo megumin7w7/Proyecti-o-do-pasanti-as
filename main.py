@@ -1,5 +1,5 @@
 """
-Módulo: main.py (Orquestador optimizado para GitHub Actions)
+Módulo: main.py (Con límites dinámicos por portal y optimizado)
 """
 import sys, os, time, hashlib, json
 from datetime import datetime
@@ -43,14 +43,13 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
         puesto_normalizado = oferta.get("puesto_buscado", "").lower()
         categoria_hoja = "Marketing" if "marketing" in puesto_normalizado else "Data & Analytics"
         
-        # ✅ COMPRESIÓN DE DATOS PARA EXCEL (Evita filas deformadas)
         reqs_raw = datos_extraidos.get("requisitos", [])
         reqs_text = [r.get("texto", "") for r in reqs_raw if r.get("texto")]
-        requisitos_comprimidos = "; ".join(reqs_text[:8])  # Máx 8 requisitos
+        requisitos_comprimidos = "; ".join(reqs_text[:8])
         
         bens_raw = datos_extraidos.get("beneficios", "")
         bens_list = [b.strip("• \n\r") for b in bens_raw.split("\n") if b.strip() and len(b.strip()) > 5]
-        beneficios_comprimidos = "; ".join(bens_list[:5])  # Máx 5 beneficios
+        beneficios_comprimidos = "; ".join(bens_list[:5])
         
         return {
             "id_oferta": f"{nombre_plataforma[:3].upper()}-{id_unico}",
@@ -61,11 +60,10 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
             "empresa": datos_extraidos.get("empresa", "No especificada"),
             "modalidad": datos_extraidos.get("modalidad", "Presencial"),
             "disponible_hasta": "-",
-            # ❌ ELIMINADO: "nivel"
             "horario": datos_extraidos.get("horario", "Tiempo Completo"),
             "departamento": lugar.capitalize(),
             "area_categoria": categoria_hoja,
-            "descripcion_breve": texto_limpio[:2000],  # ✅ AUMENTADO A 2000 CARACTERES
+            "descripcion_breve": texto_limpio[:2000],
             "requisitos": requisitos_comprimidos if requisitos_comprimidos else "No especificados",
             "beneficios": beneficios_comprimidos if beneficios_comprimidos else "No especificados"
         }
@@ -95,10 +93,12 @@ def ejecutar_scraper(scraper, nombre: str, puesto: str, lugar: str, limite_ofert
         try: scraper.cerrar_navegador()
         except: pass
 
-def ejecutar_pipeline(puesto: str = None, lugar: str = None, limite_ofertas: int = 15, 
+def ejecutar_pipeline(puesto: str = None, lugar: str = None, 
+                     limites_por_portal: dict = None, # ✅ NUEVO: Límites dinámicos
                      usar_bumeran: bool = True, usar_computrabajo: bool = True, 
-                     usar_linkedin: bool = True, usar_indeed: bool = False,  # ❌ INDEED DESACTIVADO
+                     usar_linkedin: bool = True, usar_indeed: bool = False,  
                      usar_nlp: bool = True, progress_callback=None) -> Dict:
+    
     logger.info("=" * 60 + "\n🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI\n" + "=" * 60)
     start_time = time.time()
     cleaner, extractor = TextCleaner(), AIExtractor()
@@ -114,6 +114,10 @@ def ejecutar_pipeline(puesto: str = None, lugar: str = None, limite_ofertas: int
         puesto, lugar = busquedas_activas[0]['puesto'], busquedas_activas[0]['lugar']
         logger.info(f"🎯 Búsqueda detectada: {puesto} en {lugar}")
     
+    # Valores por defecto si no se proporcionan
+    if limites_por_portal is None:
+        limites_por_portal = {"Computrabajo": 15, "Bumeran": 15, "LinkedIn": 15, "Indeed": 15}
+    
     scrapers_config = []
     if usar_computrabajo: scrapers_config.append({'scraper': ComputrabajoScraper(), 'nombre': 'Computrabajo', 'es_playwright': False})
     if usar_bumeran: scrapers_config.append({'scraper': BumeranScraper(), 'nombre': 'Bumeran', 'es_playwright': False})
@@ -127,7 +131,10 @@ def ejecutar_pipeline(puesto: str = None, lugar: str = None, limite_ofertas: int
         for idx, config in enumerate(scrapers_config, 1):
             if progress_callback: progress_callback(idx, len(scrapers_config), f"Ejecutando {config['nombre']}...")
             
-            ofertas_validadas = ejecutar_scraper(config['scraper'], config['nombre'], puesto, lugar, limite_ofertas, config['es_playwright'])
+            # ✅ AQUÍ SE USA EL LÍMITE ESPECÍFICO PARA CADA PORTAL
+            limite_actual = limites_por_portal.get(config['nombre'], 15)
+            
+            ofertas_validadas = ejecutar_scraper(config['scraper'], config['nombre'], puesto, lugar, limite_actual, config['es_playwright'])
             if not ofertas_validadas:
                 resultados_por_scraper[config['nombre']] = {'extraidas': 0, 'guardadas': 0}
                 continue
@@ -159,11 +166,20 @@ if __name__ == "__main__":
     logger.remove()
     logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{message}</cyan>", level="INFO")
     
+    # ✅ CONFIGURACIÓN DINÁMICA DE LÍMITES POR PORTAL
+    limites_dinamicos = {
+        "Computrabajo": 80,  # Ejemplo: sacar hasta 20 de aquí
+        "Bumeran": 80,       # Ejemplo: sacar hasta 15 de aquí
+        "LinkedIn": 80,      # Ejemplo: sacar hasta 10 de aquí (LinkedIn es lento)
+        "Indeed": 0          # Desactivado
+    }
+    
     resultados = ejecutar_pipeline(
-        puesto=None, lugar=None, limite_ofertas=15,
+        puesto=None, lugar=None, 
+        limites_por_portal=limites_dinamicos, # <-- Se pasa el diccionario
         usar_bumeran=True, usar_computrabajo=True, usar_linkedin=True,
-        usar_indeed=False,  # ❌ DESACTIVADO
-        usar_nlp=True
+        usar_indeed=False, usar_nlp=True
     )
+    
     if resultados['success']: print(f"\n✅ Pipeline completado: {resultados['total_ofertas']} ofertas guardadas")
     else: print(f"\n❌ Error: {resultados.get('error')}")
