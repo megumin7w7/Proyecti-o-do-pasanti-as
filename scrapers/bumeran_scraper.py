@@ -1,5 +1,5 @@
 """
-Módulo: scrapers/bumeran_scraper.py (Corregido y Optimizado para Playwright)
+Módulo: scrapers/bumeran_scraper.py (Corregido: Extracción limpia de títulos)
 """
 import re
 import time
@@ -24,6 +24,35 @@ class BumeranScraper(BaseScraper):
         except Exception:
             pass
 
+    def _extraer_titulo_limpio(self, enlace_element) -> str:
+        """Extrae el título real ignorando metadatos como 'Actualizado hace X días'"""
+        # Patron Regex para detectar cualquier texto de metadatos/fecha/estado
+        patron_ruido = r'actualizad[oa]|hace|d[ií]as?|ayer|hoy|publicad[oa]|urgente|destacad[oa]|nuevo|empleos'
+
+        # Intentar 1: Buscar por etiquetas HTML típicas de título
+        for selector in ["h2", "h3", "h1", "[class*='Title']", "[class*='title']"]:
+            try:
+                el = enlace_element.locator(selector).first
+                if el.count() > 0:
+                    texto = el.inner_text().strip()
+                    if texto and not re.search(patron_ruido, texto, re.IGNORECASE):
+                        return texto
+            except Exception:
+                pass
+
+        # Intentar 2: Recorrer las líneas de texto de la tarjeta y filtrar ruido
+        try:
+            texto_tarjeta = enlace_element.inner_text()
+            lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip()]
+            for linea in lineas:
+                # Si la línea tiene más de 3 letras y NO contiene palabras de ruido
+                if len(linea) > 3 and not re.search(patron_ruido, linea, re.IGNORECASE):
+                    return linea
+        except Exception:
+            pass
+
+        return ""
+
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
                            puesto: str = "analista de datos", lugar: str = "lima", 
                            filtro_relevancia_cb=None) -> list:
@@ -38,7 +67,6 @@ class BumeranScraper(BaseScraper):
         
         try:
             while len(ofertas_recopiladas) < limite_ofertas:
-                # ✅ MANTENER LA UBICACIÓN EN TODAS LAS PÁGINAS DE BÚSQUEDA
                 if lugar_slug:
                     base_url = f"https://www.bumeran.com.pe/en-{lugar_slug}/empleos-busqueda-{puesto_slug}.html"
                 else:
@@ -54,7 +82,6 @@ class BumeranScraper(BaseScraper):
                 self.scroll_al_final()
                 time.sleep(2)
                 
-                # Buscar enlaces de ofertas
                 enlaces = self.obtener_elementos("a[href*='-aviso-'], a[href*='/empleos/']")
                 count = enlaces.count()
                 
@@ -75,27 +102,11 @@ class BumeranScraper(BaseScraper):
                         if not href or "busqueda" in href:
                             continue
                         
-                        # ✅ EXTRACCIÓN ROBUSTA DEL TÍTULO
-                        titulo = ""
-                        try:
-                            # Buscar elemento h2, h3 o clase de título dentro de la tarjeta
-                            titulo_el = enlace.locator("h2, h3, [class*='title'], [class*='Title']").first
-                            if titulo_el.count() > 0:
-                                titulo = titulo_el.inner_text().strip()
-                        except Exception:
-                            pass
-
-                        # Fallback: Extraer filtrando etiquetas comunes (Destacado, Urgente, etc.)
-                        if not titulo:
-                            texto_tarjeta = enlace.inner_text()
-                            lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip() and len(l.strip()) > 3]
-                            lineas_filtradas = [
-                                l for l in lineas 
-                                if not any(bad in l.lower() for bad in ["destacado", "hace ", "urgente", "nuevo", "publicado", "días", "ayer", "hoy"])
-                            ]
-                            titulo = lineas_filtradas[0] if lineas_filtradas else (lineas[0] if lineas else "")
+                        # Extraer título real filtrando fechas y etiquetas
+                        titulo = self._extraer_titulo_limpio(enlace)
 
                         if not titulo:
+                            logger.warning(f"⚠️ No se pudo determinar el título en la oferta {i}")
                             continue
 
                         # 1. Verificar duplicados
@@ -108,7 +119,7 @@ class BumeranScraper(BaseScraper):
                             logger.info(f"⏭️ Descartado (No relevante): '{titulo}' vs '{puesto}'")
                             continue
                         
-                        # ✅ NAVEGACIÓN SEGURA A LA OFERTA
+                        # Navegación a la oferta en nueva pestaña
                         detalle_page = self.page.context.new_page()
                         try:
                             detalle_page.goto(href, timeout=20000, wait_until="domcontentloaded")
@@ -123,7 +134,6 @@ class BumeranScraper(BaseScraper):
                             
                             texto_crudo = re.sub(r'\n\s*\n', '\n', texto_crudo).strip()
                             
-                            # 3. Validar longitud del texto
                             if texto_crudo and len(texto_crudo) > 150:
                                 ofertas_recopiladas.append({
                                     "link_oferta": href,
@@ -133,9 +143,8 @@ class BumeranScraper(BaseScraper):
                                 })
                                 logger.info(f"✅ [{len(ofertas_recopiladas)}] Guardada: {titulo[:35]}...")
                             else:
-                                logger.warning(f"⚠️ Descartado (Texto muy corto < 150 chars): {titulo[:30]}")
+                                logger.warning(f"⚠️ Descartado (Texto corto < 150 chars): {titulo[:30]}")
                         finally:
-                            # Garantiza que la pestaña siempre se cierre sin afectar la página principal
                             detalle_page.close()
                         
                     except Exception as e:
