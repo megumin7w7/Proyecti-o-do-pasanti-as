@@ -1,106 +1,139 @@
 """
-Módulo: scrapers/base_scraper.py (Migrado a Playwright)
-============================================================================
+Módulo: scrapers/base_scraper.py (Con debug snapshot)
 """
-from playwright.sync_api import sync_playwright, Page, Browser
-from loguru import logger
 import time
+import platform
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from loguru import logger
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config.settings import HEADLESS_MODE, TIMEOUT_SECONDS
 
 class BaseScraper:
-    """
-    Clase base para todos los scrapers usando Playwright.
-    Proporciona funcionalidades comunes: navegador, esperas, extracción.
-    """
+    """Clase base para todos los scrapers con configuraciones antibloqueo."""
     def __init__(self):
-        self.playwright = None
-        self.browser: Browser = None
-        self.page: Page = None
+        self.driver = None
+        self.wait = None
         self.logger = logger
-        self.logger.info("✅ BaseScraper (Playwright) inicializado")
+        self.logger.info("✅ BaseScraper inicializado")
 
-    def iniciar_navegador(self, headless: bool = True):
-        """Inicializa el navegador Chromium con Playwright."""
-        self.logger.info(" Configurando Chromium con Playwright...")
-        
-        self.playwright = sync_playwright().start()
-        
-        # Lanzar Chromium con configuraciones anti-detección
-        self.browser = self.playwright.chromium.launch(
-            headless=headless,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-blink-features=AutomationControlled"
-            ]
-        )
-        
-        # Crear contexto con viewport grande
-        context = self.browser.new_context(
-            viewport={"width": 1920, "height": 1080},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        )
-        
-        # Crear página
-        self.page = context.new_page()
-        
-        # Inyectar scripts anti-detección
-        self.page.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-            window.chrome = { runtime: {} };
-        """)
-        
-        self.logger.info("✅ Navegador Playwright iniciado con éxito")
-        return self.page
-
-    def navegar_a(self, url: str, wait_until: str = "domcontentloaded"):
-        """Navega a una URL y espera a que cargue."""
-        self.logger.debug(f"🔗 Navegando a: {url[:80]}...")
-        self.page.goto(url, wait_until=wait_until, timeout=60000)
-        time.sleep(1)  # Pausa breve para que cargue contenido dinámico
-
-    def esperar_elemento(self, selector: str, timeout: int = 15000):
-        """Espera a que un elemento esté presente en la página."""
+    def debug_snapshot(self, nombre="debug"):
+        """Guarda screenshot + HTML + status/URL real para depurar en CI."""
         try:
-            self.page.wait_for_selector(selector, timeout=timeout)
-            return True
-        except Exception:
+            self.page.screenshot(path=f"{nombre}.png", full_page=True)
+            html = self.page.content()
+            with open(f"{nombre}.html", "w", encoding="utf-8") as f:
+                f.write(html)
+            logger.warning(
+                f" Debug guardado: {nombre}.png / {nombre}.html "
+                f"({len(html)} chars) | URL final: {self.page.url}"
+            )
+        except Exception as e:
+            logger.error(f"No se pudo guardar debug: {e}")
+
+    def _encontrar_chromedriver(self):
+        """Busca chromedriver en rutas comunes de Linux."""
+        rutas_posibles = [
+            '/usr/bin/chromedriver',
+            '/usr/local/bin/chromedriver',
+            '/snap/bin/chromedriver',
+            '/usr/lib/chromium-browser/chromedriver',
+            '/usr/lib/chromium/chromedriver'
+        ]
+        
+        for ruta in rutas_posibles:
+            if os.path.exists(ruta):
+                self.logger.info(f"🔍 Chromedriver encontrado en: {ruta}")
+                return ruta
+        
+        self.logger.info("⚠️ Chromedriver no encontrado en rutas del sistema, usando webdriver-manager")
+        return ChromeDriverManager().install()
+
+    def iniciar_navegador(self):
+        """Inicializa el navegador Chrome con configuraciones antibloqueo."""
+        self.logger.info("🌐 Configurando navegador Chrome...")
+        chrome_options = Options()
+        
+        # 1. Configuraciones Anti-Detección y Estabilidad
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option('useAutomationExtension', False)
+        
+        # 2. 🚨 FIX CRÍTICO PARA RENDER (LINUX): Buscar en múltiples rutas
+        if platform.system() == "Linux":
+            posibles_rutas = ['/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome']
+            ruta_encontrada = None
+            for ruta in posibles_rutas:
+                if os.path.exists(ruta):
+                    ruta_encontrada = ruta
+                    break
+            
+            if ruta_encontrada:
+                chrome_options.binary_location = ruta_encontrada
+                self.logger.info(f" Entorno Linux detectado: Usando navegador en {ruta_encontrada}")
+            else:
+                self.logger.warning("⚠️ No se encontró binario de Chromium. Intentando con default...")
+            
+            driver_path = self._encontrar_chromedriver()
+            service = Service(driver_path)
+        else:
+            service = Service(ChromeDriverManager().install())
+            
+        # 3. Modo headless (sin interfaz gráfica)
+        if HEADLESS_MODE:
+            chrome_options.add_argument("--headless=new")
+            
+        # 4. Inicializar driver
+        self.driver = webdriver.Chrome(service=service, options=chrome_options)
+        
+        # 5. Configurar tiempos de espera
+        self.driver.implicitly_wait(TIMEOUT_SECONDS)
+        self.driver.maximize_window()
+        self.wait = WebDriverWait(self.driver, TIMEOUT_SECONDS)
+        
+        self.logger.info("✅ Navegador iniciado con éxito")
+        return self.driver
+
+    def obtener_texto_pagina(self, url: str) -> str:
+        if not self.driver:
+            self.iniciar_navegador()
+        try:
+            self.logger.info(f"🕵️ Extrayendo información de: {url[:80]}...")
+            self.driver.get(url)
+            time.sleep(2)
+            texto_crudo = self.driver.find_element("tag name", "body").text
+            self.logger.debug(f"✅ Extraídos {len(texto_crudo)} caracteres")
+            return texto_crudo
+        except TimeoutException:
+            self.logger.error(f"❌ Timeout al cargar {url}")
+            return None
+        except Exception as e:
+            self.logger.error(f"❌ Error al extraer de {url}: {e}")
+            return None
+
+    def esperar_elemento(self, by, selector, timeout: int = None):
+        try:
+            wait_time = timeout or TIMEOUT_SECONDS
+            wait = WebDriverWait(self.driver, wait_time)
+            return wait.until(EC.presence_of_element_located((by, selector)))
+        except TimeoutException:
             self.logger.warning(f"⚠️ Elemento no encontrado: {selector}")
-            return False
-
-    def hacer_click(self, selector: str):
-        """Hace click en un elemento."""
-        try:
-            self.page.click(selector, timeout=5000)
-        except Exception as e:
-            self.logger.error(f"❌ Error al hacer click en {selector}: {e}")
-
-    def escribir_texto(self, selector: str, texto: str):
-        """Escribe texto en un input."""
-        try:
-            self.page.fill(selector, texto)
-        except Exception as e:
-            self.logger.error(f"❌ Error al escribir en {selector}: {e}")
-
-    def obtener_texto_pagina(self) -> str:
-        """Obtiene todo el texto visible de la página."""
-        return self.page.inner_text("body")
-
-    def obtener_elementos(self, selector: str):
-        """Obtiene una lista de elementos que coinciden con el selector."""
-        return self.page.locator(selector)
-
-    def scroll_al_final(self):
-        """Hace scroll hasta el final de la página."""
-        self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            return None
 
     def cerrar_navegador(self):
-        """Cierra el navegador de forma segura."""
-        try:
-            if self.browser:
-                self.browser.close()
-            if self.playwright:
-                self.playwright.stop()
-            self.logger.info("🔒 Navegador Playwright cerrado")
-        except Exception as e:
-            self.logger.error(f"❌ Error al cerrar navegador: {e}")
+        if self.driver:
+            self.driver.quit()
+            self.driver = None
+            self.wait = None
+            self.logger.info(" Navegador cerrado de forma segura")
