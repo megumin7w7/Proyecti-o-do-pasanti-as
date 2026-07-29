@@ -52,13 +52,10 @@ class BumeranScraper(BaseScraper):
             pass
 
         return ""
-
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
-                           puesto: str = "analista de datos", lugar: str = "lima", 
-                           filtro_relevancia_cb=None) -> list:
-        """Recolecta ofertas de Bumeran con extracción limpia y manejo seguro de pestañas."""
-        if not self.page:
-            self.iniciar_navegador(headless=True)
+                          puesto: str = "analista de datos", lugar: str = "lima", 
+                          filtro_relevancia_cb=None) -> list:
+        if not self.page: self.iniciar_navegador(headless=True)
             
         ofertas_recopiladas = []
         puesto_slug = puesto.lower().replace(" ", "-")
@@ -67,24 +64,25 @@ class BumeranScraper(BaseScraper):
         
         try:
             while len(ofertas_recopiladas) < limite_ofertas:
-                if lugar_slug:
-                    base_url = f"https://www.bumeran.com.pe/en-{lugar_slug}/empleos-busqueda-{puesto_slug}.html"
+                if lugar_slug and pagina_actual == 1:
+                    url_busqueda = f"https://www.bumeran.com.pe/en-{lugar_slug}/empleos-busqueda-{puesto_slug}.html"
                 else:
-                    base_url = f"https://www.bumeran.com.pe/empleos-busqueda-{puesto_slug}.html"
+                    url_busqueda = f"https://www.bumeran.com.pe/empleos-busqueda-{puesto_slug}.html"
                 
-                url_busqueda = base_url if pagina_actual == 1 else f"{base_url}?page={pagina_actual}"
+                if pagina_actual > 1:
+                    conector = "&" if "?" in url_busqueda else "?"
+                    url_busqueda = f"{url_busqueda}{conector}page={pagina_actual}"
                     
                 logger.info(f"🔍 Bumeran (Pág {pagina_actual}): {url_busqueda}")
                 self.navegar_a(url_busqueda)
-                time.sleep(3)
+                time.sleep(1.5) # ⚡ REDUCIDO de 3s a 1.5s
                 self._destruir_modales()
                 
                 self.scroll_al_final()
-                time.sleep(2)
+                time.sleep(1) # ⚡ REDUCIDO de 2s a 1s
                 
                 enlaces = self.obtener_elementos("a[href*='-aviso-'], a[href*='/empleos/']")
                 count = enlaces.count()
-                
                 if count == 0:
                     logger.warning(f"⚠️ No hay ofertas en página {pagina_actual}")
                     break
@@ -95,67 +93,46 @@ class BumeranScraper(BaseScraper):
                     try:
                         enlace = enlaces.nth(i)
                         href = enlace.get_attribute("href")
+                        if href and not href.startswith("http"): href = f"https://www.bumeran.com.pe{href}"
+                        if not href or "busqueda" in href: continue
                         
-                        if href and not href.startswith("http"):
-                            href = f"https://www.bumeran.com.pe{href}"
+                        texto_tarjeta = enlace.inner_text()
+                        lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip() and len(l.strip()) > 3]
+                        if not lineas: continue
+                        titulo = lineas[0]
                         
-                        if not href or "busqueda" in href:
-                            continue
+                        if any(o['link_oferta'] == href for o in ofertas_recopiladas): continue
+                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto): continue
                         
-                        # Extraer título real filtrando fechas y etiquetas
-                        titulo = self._extraer_titulo_limpio(enlace)
-
-                        if not titulo:
-                            logger.warning(f"⚠️ No se pudo determinar el título en la oferta {i}")
-                            continue
-
-                        # 1. Verificar duplicados
-                        if any(o['link_oferta'] == href for o in ofertas_recopiladas):
-                            logger.info(f"⏭️ Descartado (Duplicado): {titulo[:30]}")
-                            continue
-                            
-                        # 2. Filtro de relevancia
-                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
-                            logger.info(f"⏭️ Descartado (No relevante): '{titulo}' vs '{puesto}'")
-                            continue
+                        self.page.evaluate(f"window.open('{href}', '_blank')")
+                        self.page.wait_for_timeout(500) # ⚡ REDUCIDO
                         
-                        # Navegación a la oferta en nueva pestaña
-                        detalle_page = self.page.context.new_page()
+                        self.page = self.page.context.pages[-1]
+                        time.sleep(1) # ⚡ REDUCIDO de 2s a 1s
+                        self._destruir_modales()
+                        
                         try:
-                            detalle_page.goto(href, timeout=20000, wait_until="domcontentloaded")
-                            time.sleep(1.5)
-                            self._destruir_modales(detalle_page)
-                            
-                            try:
-                                cuerpo = detalle_page.locator("main, section, div.job-description, div[class*='description']").first
-                                texto_crudo = cuerpo.inner_text()
-                            except Exception:
-                                texto_crudo = detalle_page.inner_text("body")
-                            
-                            texto_crudo = re.sub(r'\n\s*\n', '\n', texto_crudo).strip()
-                            
-                            if texto_crudo and len(texto_crudo) > 150:
-                                ofertas_recopiladas.append({
-                                    "link_oferta": href,
-                                    "plataforma_origen": self.plataforma,
-                                    "texto_crudo": texto_crudo[:2000],
-                                    "titulo_puesto": titulo
-                                })
-                                logger.info(f"✅ [{len(ofertas_recopiladas)}] Guardada: {titulo[:35]}...")
-                            else:
-                                logger.warning(f"⚠️ Descartado (Texto corto < 150 chars): {titulo[:30]}")
-                        finally:
-                            detalle_page.close()
+                            cuerpo = self.page.locator("main, section, div.job-description").first
+                            texto_crudo = cuerpo.inner_text()
+                        except:
+                            texto_crudo = self.page.inner_text("body")
                         
+                        if texto_crudo and len(texto_crudo) > 150:
+                            ofertas_recopiladas.append({"link_oferta": href, "plataforma_origen": self.plataforma, "texto_crudo": texto_crudo[:2000], "titulo_puesto": titulo})
+                            logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:35]}...")
+                        
+                        self.page.close()
+                        self.page = self.page.context.pages[0]
                     except Exception as e:
                         logger.error(f"❌ Error en oferta {i}: {e}")
+                        if len(self.page.context.pages) > 1:
+                            self.page.close()
+                            self.page = self.page.context.pages[0]
                 
                 pagina_actual += 1
-                if pagina_actual > 5:
-                    break
-                    
+                if pagina_actual > 5: break # Límite de seguridad
         except Exception as e:
-            logger.error(f"❌ Error crítico en Bumeran: {e}")
+            logger.error(f"❌ Error crítico: {e}")
         
         logger.info(f"✅ Total Bumeran: {len(ofertas_recopiladas)} ofertas extraídas")
         return ofertas_recopiladas
