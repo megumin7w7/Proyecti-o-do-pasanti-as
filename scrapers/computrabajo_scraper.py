@@ -23,8 +23,11 @@ class ComputrabajoScraper(BaseScraper):
             logger.debug("🛡️ Modales eliminados")
         except Exception:
             pass
-    def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
+
+        def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
                           puesto: str = None, lugar: str = None, filtro_relevancia_cb=None) -> list:
+        if not self.page:
+            self.iniciar_navegador(headless=True)
             
         ofertas_recopiladas = []
         pagina_actual = 1
@@ -33,16 +36,19 @@ class ComputrabajoScraper(BaseScraper):
         puesto_query = puesto.lower().replace(" ", "-") if puesto else ""
         lugar_query = lugar.lower().replace(" ", "-") if lugar else ""
         
-        if puesto_query and lugar_query: url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}-en-{lugar_query}"
-        elif puesto_query: url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}"
-        else: url_base = url_semilla.rstrip('/')
+        if puesto_query and lugar_query:
+            url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}-en-{lugar_query}"
+        elif puesto_query:
+            url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}"
+        else:
+            url_base = url_semilla.rstrip('/')
         
         try:
             while pagina_actual <= MAX_PAGINAS and len(ofertas_recopiladas) < limite_ofertas:
                 url_pagina = f"{url_base}?p={pagina_actual}"
                 logger.info(f"📄 Página {pagina_actual}: {url_pagina}")
                 self.navegar_a(url_pagina)
-                time.sleep(1) # ⚡ REDUCIDO de 2s a 1s
+                time.sleep(1.5)
                 self._eliminar_obstaculos()
                 
                 ofertas_locator = self.obtener_elementos("a.js-o-link")
@@ -58,19 +64,39 @@ class ComputrabajoScraper(BaseScraper):
                         oferta_elem = ofertas_locator.nth(i)
                         href = oferta_elem.get_attribute("href")
                         titulo = oferta_elem.inner_text().strip()
-                        if not href or not titulo: continue
-                        if any(o['link_oferta'] == href for o in ofertas_recopiladas): continue
-                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto): continue
+                        
+                        if not href or not titulo:
+                            continue
+                        
+                        # ✅ 1. ASEGURAR URL ABSOLUTA
+                        if not href.startswith("http"):
+                            href = f"https://pe.computrabajo.com{href}"
+                        
+                        if any(o['link_oferta'] == href for o in ofertas_recopiladas):
+                            continue
+                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
+                            continue
                         
                         self.page.evaluate(f"window.open('{href}', '_blank')")
-                        self.page.wait_for_timeout(500) # ⚡ REDUCIDO de 1000ms a 500ms
+                        self.page.wait_for_timeout(800)
                         
                         self.page = self.page.context.pages[-1]
-                        time.sleep(0.5) # ⚡ REDUCIDO de 1s a 0.5s
+                        time.sleep(1)
                         
-                        texto_crudo = self.obtener_texto_pagina()
+                        # ✅ 2. CAPTURAR DESCRIPCIÓN COMPLETA
+                        try:
+                            cuerpo = self.page.locator("main, section.job-description, div.offer_requirements, .job-description").first
+                            texto_crudo = cuerpo.inner_text()
+                        except:
+                            texto_crudo = self.page.inner_text("body")[:4000] # Fallback limitado a 4000 chars
+                        
                         if texto_crudo and len(texto_crudo) > 50:
-                            ofertas_recopiladas.append({"link_oferta": href, "plataforma_origen": self.plataforma, "texto_crudo": texto_crudo[:2000], "titulo_puesto": titulo})
+                            ofertas_recopiladas.append({
+                                "link_oferta": href,
+                                "plataforma_origen": self.plataforma,
+                                "texto_crudo": texto_crudo[:3000], # ✅ AUMENTADO
+                                "titulo_puesto": titulo
+                            })
                             logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:40]}...")
                         
                         self.page.close()
