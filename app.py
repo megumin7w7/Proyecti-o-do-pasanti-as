@@ -47,23 +47,22 @@ st.sidebar.info("💡 **Nota:** El scraper leerá automáticamente la configurac
 # ==============================================================================
 # 2. CARGA DE DATOS DESDE GOOGLE SHEETS
 # ==============================================================================
-@st.cache_data(ttl=300) # Guarda en caché por 5 minutos
+# ==============================================================================
+# 2. CARGA DE DATOS DESDE GOOGLE SHEETS
+# ==============================================================================
+@st.cache_data(ttl=300) # Cachea por 5 minutos por defecto
 def cargar_datos():
     try:
         import json
         import gspread
         from google.oauth2.service_account import Credentials
         
-        # 1. Obtener el secreto de Streamlit
         creds_json = st.secrets.get("GOOGLE_CREDENTIALS_JSON")
         if not creds_json:
             st.error("⚠️ No se encontró el secreto GOOGLE_CREDENTIALS_JSON en Settings.")
             return pd.DataFrame()
             
-        # 2. Parsear el JSON
         creds_dict = json.loads(creds_json)
-        
-        # 3. ✅ CAMBIO CLAVE: Usar scopes completos (Spreadsheets + Drive)
         creds = Credentials.from_service_account_info(
             creds_dict, 
             scopes=[
@@ -72,28 +71,26 @@ def cargar_datos():
             ]
         )
         
-        # 4. Conectar y abrir
         client = gspread.authorize(creds)
-        
-        # ⚠️ IMPORTANTE: El nombre debe ser EXACTO, respetando mayúsculas y guiones bajos
         sheet = client.open("Laboral_AI_Scraper_Data")
         worksheet = sheet.worksheet("Ofertas_Extraidas")
         data = worksheet.get_all_records()
-        
         return pd.DataFrame(data)
         
     except gspread.SpreadsheetNotFound:
-        st.error("❌ No se encontró la hoja 'Laboral_AI_Scraper_Data'. Verifica que el nombre sea exacto y que hayas compartido el acceso.")
+        st.error("❌ No se encontró la hoja 'Laboral_AI_Scraper_Data'. Verifica el nombre exacto.")
         return pd.DataFrame()
     except Exception as e:
         st.error(f"❌ Error conectando a Google Sheets: {e}")
         return pd.DataFrame()
 
+# Botón para forzar la actualización inmediata
+if st.button("🔄 Actualizar Datos Ahora", use_container_width=True):
+    st.cache_data.clear() # Borra la caché de 5 minutos
+    st.rerun()            # Recarga la página inmediatamente
+
 df = cargar_datos()
 
-# ==============================================================================
-# 3. VISUALIZACIÓN DE DATOS
-# ==============================================================================
 # ==============================================================================
 # 3. VISUALIZACIÓN DE DATOS
 # ==============================================================================
