@@ -50,27 +50,41 @@ st.sidebar.info("💡 **Nota:** El scraper leerá automáticamente la configurac
 @st.cache_data(ttl=300) # Guarda en caché por 5 minutos
 def cargar_datos():
     try:
-        # ✅ CAMBIO CLAVE: Usar st.secrets en lugar de os.environ
-        creds_json = st.secrets.get("GOOGLE_CREDENTIALS_JSON")
+        import json
+        import gspread
+        from google.oauth2.service_account import Credentials
         
+        # 1. Obtener el secreto de Streamlit
+        creds_json = st.secrets.get("GOOGLE_CREDENTIALS_JSON")
         if not creds_json:
-            st.error("⚠️ No se encontró el secreto GOOGLE_CREDENTIALS_JSON.")
-            st.info("Ve a Settings → Secrets en tu dashboard de Streamlit y agrégalo.")
+            st.error("⚠️ No se encontró el secreto GOOGLE_CREDENTIALS_JSON en Settings.")
             return pd.DataFrame()
             
-        # Parsear el JSON
+        # 2. Parsear el JSON
         creds_dict = json.loads(creds_json)
+        
+        # 3. ✅ CAMBIO CLAVE: Usar scopes completos (Spreadsheets + Drive)
         creds = Credentials.from_service_account_info(
             creds_dict, 
-            scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
+            scopes=[
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive"
+            ]
         )
+        
+        # 4. Conectar y abrir
         client = gspread.authorize(creds)
         
+        # ⚠️ IMPORTANTE: El nombre debe ser EXACTO, respetando mayúsculas y guiones bajos
         sheet = client.open("Laboral_AI_Scraper_Data")
         worksheet = sheet.worksheet("Ofertas_Extraidas")
         data = worksheet.get_all_records()
+        
         return pd.DataFrame(data)
         
+    except gspread.SpreadsheetNotFound:
+        st.error("❌ No se encontró la hoja 'Laboral_AI_Scraper_Data'. Verifica que el nombre sea exacto y que hayas compartido el acceso.")
+        return pd.DataFrame()
     except Exception as e:
         st.error(f"❌ Error conectando a Google Sheets: {e}")
         return pd.DataFrame()
