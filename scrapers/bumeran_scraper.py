@@ -1,5 +1,5 @@
 """
-Módulo: scrapers/bumeran_scraper.py (Control de flujo robusto)
+Módulo: scrapers/bumeran_scraper.py (Corrección de extracción de título)
 """
 import time
 import re
@@ -26,7 +26,6 @@ class BumeranScraper(BaseScraper):
                           puesto: str = "analista de datos", lugar: str = "lima", 
                           filtro_relevancia_cb=None) -> list:
         
-        # 1. ✅ EL ACUMULADOR VIVE FUERA DE CUALQUIER TRY/EXCEPT PARA SOBREVIVIR A CUALQUIER FALLO
         ofertas_recopiladas = []
         
         if not self.page:
@@ -35,7 +34,6 @@ class BumeranScraper(BaseScraper):
         puesto_slug = puesto.lower().replace(" ", "-")
         pagina_actual = 1
         
-        # 2. ✅ EL LOOP PRINCIPAL MANEJA SUS PROPIOS ERRORES SIN BORRAR EL ACUMULADOR
         while len(ofertas_recopiladas) < limite_ofertas:
             try:
                 if pagina_actual == 1:
@@ -45,18 +43,15 @@ class BumeranScraper(BaseScraper):
                     
                 logger.info(f"🔍 Bumeran (Pág {pagina_actual}): {url_busqueda}")
                 
-                # Navegar y esperar carga básica
                 self.page.goto(url_busqueda, wait_until="domcontentloaded", timeout=30000)
                 time.sleep(2)
                 self._destruir_modales()
                 
-                # Aplicar filtro de ubicación si existe (solo en página 1)
                 if lugar and pagina_actual == 1:
                     try:
                         input_lugar = self.page.locator("input[aria-label='Lugar de trabajo']").first
                         input_lugar.fill(lugar.capitalize())
                         self.page.keyboard.press("Enter")
-                        # Esperar a que la red se calme o aparezcan resultados
                         self.page.wait_for_load_state("networkidle", timeout=10000)
                         logger.info(f"📍 Filtro de ubicación aplicado: {lugar}")
                     except Exception as e:
@@ -65,13 +60,12 @@ class BumeranScraper(BaseScraper):
                 self.scroll_al_final()
                 time.sleep(1.5)
                 
-                # 3. ✅ ESPERAR EXPLÍCITAMENTE. SI FALLA, ES EL FIN DE LA PAGINACIÓN, NO UN ERROR FATAL
                 selector_ofertas = "a[href*='-aviso-'], a[href*='/empleos/']"
                 try:
                     self.page.wait_for_selector(selector_ofertas, timeout=8000)
                 except Exception:
-                    logger.info(f"🏁 Bumeran: Fin de paginación en página {pagina_actual} (no se encontraron más enlaces)")
-                    break  # 👈 CORRECTO: Rompe el loop, NO retorna vacío
+                    logger.info(f"🏁 Bumeran: Fin de paginación en página {pagina_actual}")
+                    break
                 
                 enlaces = self.obtener_elementos(selector_ofertas)
                 count = enlaces.count()
@@ -87,24 +81,29 @@ class BumeranScraper(BaseScraper):
                     try:
                         enlace = enlaces.nth(i)
                         href = enlace.get_attribute("href")
-                        texto_tarjeta = enlace.inner_text()
                         
                         if not href or "busqueda" in href:
                             continue
                         
-                        # Completar URL
                         if not href.startswith("http"):
                             href = f"https://www.bumeran.com.pe{href}"
                         
-                        lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip()]
-                        if not lineas:
-                            continue
-                        
-                        titulo = lineas[0]
+                        # ✅ CORRECCIÓN CLAVE: Extraer el título explícitamente del h2 o h3, no de la primera línea
+                        try:
+                            titulo_elem = enlace.locator("h2, h3").first
+                            titulo = titulo_elem.inner_text().strip()
+                        except Exception:
+                            # Fallback: tomar la primera línea con más de 15 caracteres
+                            texto_tarjeta = enlace.inner_text()
+                            lineas = [l.strip() for l in texto_tarjeta.split('\n') if len(l.strip()) > 15]
+                            titulo = lineas[0] if lineas else "Sin título"
                         
                         if any(o['link_oferta'] == href for o in ofertas_recopiladas):
                             continue
+                        
+                        # ✅ LOG DE DEPURACIÓN: Ver si el filtro lo está descartando
                         if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
+                            logger.debug(f"⏭️ Descartado por filtro: '{titulo}'")
                             continue
                         
                         # Abrir oferta
@@ -120,22 +119,21 @@ class BumeranScraper(BaseScraper):
                             ofertas_recopiladas.append({
                                 "link_oferta": href,
                                 "plataforma_origen": self.plataforma,
-                                "texto_crudo": texto_crudo[:3000], # ✅ Descripción completa
+                                "texto_crudo": texto_crudo[:3000],
                                 "titulo_puesto": titulo
                             })
-                            logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:35]}...")
+                            # ✅ Cambiado a INFO para que lo veas en los logs
+                            logger.info(f"✅ [{len(ofertas_recopiladas)}] Guardada: {titulo[:40]}...")
                         
                         self.page.close()
                         self.page = self.page.context.pages[0]
                         
                     except Exception as e:
                         logger.error(f"❌ Error procesando oferta {i}: {e}")
-                        # Asegurar retorno a la página principal
                         if len(self.page.context.pages) > 1:
                             self.page.close()
                             self.page = self.page.context.pages[0]
                 
-                # 4. ✅ HEURÍSTICA DE FIN DE PAGINACIÓN: Si la página tenía menos de 15 ofertas, no pedir la siguiente
                 if count < 15:
                     logger.info("🏁 Página parcial detectada (< 15 ofertas), asumiendo última página real.")
                     break
@@ -143,11 +141,9 @@ class BumeranScraper(BaseScraper):
                 pagina_actual += 1
                 
             except Exception as e:
-                # 5. ✅ SI ALGO FALLA CATASTRÓFICAMENTE, REGISTRAMOS EL ERROR PERO DEVOLVEMOS LO ACUMULADO
                 logger.error(f"❌ Error crítico en página {pagina_actual}: {e}")
                 self.debug_snapshot(f"bumeran_error_p{pagina_actual}")
-                break # Rompe el loop, pero el código continúa hasta el return final
+                break
         
-        # 6. ✅ SIEMPRE RETORNA EL ACUMULADOR, INCLUSO SI HUBO UN BREAK O UNA EXCEPCIÓN
         logger.info(f"✅ Total Bumeran: {len(ofertas_recopiladas)} ofertas extraídas y listas para retornar")
         return ofertas_recopiladas
