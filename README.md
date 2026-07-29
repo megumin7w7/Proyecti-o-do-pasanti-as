@@ -3,7 +3,7 @@
 # Laboral.AI — Job Scraper Inteligente
 ### Proyecto de Pasantía 2026 | Pipeline de Extracción y Análisis de Ofertas Laborales
 
-<img src="https://readme-typing-svg.herokuapp.com?font=Lexend+Giga&size=24&pause=1000&color=4A90E2&center=true&vCenter=true&width=700&lines=Pipeline+de+Extracción+de+Empleos;Scraping+%7C+NLP+%7C+IA;Python+%7C+Selenium+%7C+Playwright+%7C+Streamlit;Arteaga+Guerra%2C+Pedro+Sebastian" />
+<img src="https://readme-typing-svg.herokuapp.com?font=Lexend+Giga&size=24&pause=1000&color=4A90E2&center=true&vCenter=true&width=700&lines=+%7C+NLP+%7C+IA;Python+%7C+Selenium+%7C+Playwright+%7C+Streamlit;Arteaga+Guerra%2C+Pedro+Sebastian" />
 
 <br>
 
