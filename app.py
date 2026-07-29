@@ -47,22 +47,30 @@ st.sidebar.info("💡 **Nota:** El scraper leerá automáticamente la configurac
 # ==============================================================================
 # 2. CARGA DE DATOS DESDE GOOGLE SHEETS
 # ==============================================================================
-@st.cache_data(ttl=300) # Guarda en caché por 5 minutos para no saturar la API
+@st.cache_data(ttl=300) # Guarda en caché por 5 minutos
 def cargar_datos():
     try:
-        creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+        # ✅ CAMBIO CLAVE: Usar st.secrets en lugar de os.environ
+        creds_json = st.secrets.get("GOOGLE_CREDENTIALS_JSON")
+        
         if not creds_json:
-            st.error("⚠️ No se encontró la variable de entorno GOOGLE_CREDENTIALS_JSON")
+            st.error("⚠️ No se encontró el secreto GOOGLE_CREDENTIALS_JSON.")
+            st.info("Ve a Settings → Secrets en tu dashboard de Streamlit y agrégalo.")
             return pd.DataFrame()
             
+        # Parsear el JSON
         creds_dict = json.loads(creds_json)
-        creds = Credentials.from_service_account_info(creds_dict, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
+        creds = Credentials.from_service_account_info(
+            creds_dict, 
+            scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
+        )
         client = gspread.authorize(creds)
         
         sheet = client.open("Laboral_AI_Scraper_Data")
         worksheet = sheet.worksheet("Ofertas_Extraidas")
         data = worksheet.get_all_records()
         return pd.DataFrame(data)
+        
     except Exception as e:
         st.error(f"❌ Error conectando a Google Sheets: {e}")
         return pd.DataFrame()
