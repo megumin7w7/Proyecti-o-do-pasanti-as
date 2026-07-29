@@ -20,7 +20,6 @@ class LinkedInScraper(BaseScraper):
             """)
         except Exception:
             pass
-
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
                           puesto: str = "practicante", lugar: str = "peru", 
                           filtro_relevancia_cb=None) -> list:
@@ -32,7 +31,7 @@ class LinkedInScraper(BaseScraper):
         lugar_url = urllib.parse.quote(lugar)
         offset = 0
         paginas_revisadas = 0
-        max_paginas = 5  # Mantenemos 5 páginas pero más rápido
+        max_paginas = 2  # ⚡ CAMBIO CLAVE: De 5 a 2 páginas (ahorra ~10 minutos)
         
         try:
             while len(ofertas_recopiladas) < limite_ofertas and paginas_revisadas < max_paginas:
@@ -40,11 +39,11 @@ class LinkedInScraper(BaseScraper):
                 logger.info(f"🔍 LinkedIn (Pág {paginas_revisadas + 1}): {url_busqueda}")
                 
                 self.navegar_a(url_busqueda)
-                time.sleep(1)  # ⚡ REDUCIDO de 3s a 1s
+                time.sleep(1)  # ⚡ Reducido de 3s a 1s
                 self._destruir_modales()
                 
                 self.scroll_al_final()
-                time.sleep(0.5)  # ⚡ REDUCIDO de 2s a 0.5s
+                time.sleep(0.5)  # ⚡ Reducido de 2s a 0.5s
                 
                 tarjetas = self.obtener_elementos("div.base-card, div.job-search-card, li.jobs-search-results__list-item")
                 count = tarjetas.count()
@@ -55,12 +54,9 @@ class LinkedInScraper(BaseScraper):
                 
                 logger.info(f"📦 {count} tarjetas encontradas")
                 
-                # ⚡ PROCESAMIENTO RÁPIDO: Extraer de la tarjeta sin abrir cada oferta
                 for i in range(min(count, limite_ofertas - len(ofertas_recopiladas))):
                     try:
                         tarjeta = tarjetas.nth(i)
-                        
-                        # Extraer datos DIRECTAMENTE de la tarjeta (sin abrir)
                         try:
                             enlace = tarjeta.locator("a.base-card__full-link, a").first
                             href = enlace.get_attribute("href")
@@ -70,67 +66,43 @@ class LinkedInScraper(BaseScraper):
                         
                         if not href or "job" not in href.lower():
                             continue
-                        
-                        # Verificar duplicados
                         if any(o['link_oferta'] == href for o in ofertas_recopiladas):
                             continue
-                        
-                        # Filtro de relevancia
                         if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
                             continue
                         
-                        #  EXTRACCIÓN RÁPIDA: Obtener texto de la tarjeta misma
-                        # En lugar de abrir cada oferta, extraemos lo que podemos ver
+                        # Abrir oferta
+                        self.page.evaluate(f"window.open('{href}', '_blank')")
+                        self.page.wait_for_timeout(500)  # ⚡ Reducido
+                        
+                        self.page = self.page.context.pages[-1]
+                        time.sleep(1)  # ⚡ Reducido de 3s a 1s
+                        self._destruir_modales()
+                        
                         try:
-                            # Buscar descripción en la tarjeta
-                            desc_elem = tarjeta.locator(".job-card-container__overflow, .job-card-list__description")
-                            descripcion_corta = desc_elem.inner_text() if desc_elem.count() > 0 else ""
-                            
-                            # Buscar empresa
-                            empresa_elem = tarjeta.locator(".job-card-container__company-name, h4")
-                            empresa = empresa_elem.inner_text() if empresa_elem.count() > 0 else "No especificada"
-                            
-                            # Construir texto crudo con lo disponible
-                            texto_crudo = f"{titulo}\n{empresa}\n{descripcion_corta}"
+                            btn_ver_mas = self.page.locator("button.show-more-less-html__button").first
+                            btn_ver_mas.click()
+                            time.sleep(0.5)  # ⚡ Reducido
                         except:
-                            texto_crudo = titulo
+                            pass
                         
-                        # ⚡ Solo abrir la oferta si el texto es muy corto (< 100 chars)
-                        if len(texto_crudo) < 150:
-                            logger.debug(f"🔍 Texto corto, abriendo oferta completa...")
-                            self.page.evaluate(f"window.open('{href}', '_blank')")
-                            self.page.wait_for_timeout(500)  # ⚡ REDUCIDO
-                            
-                            self.page = self.page.context.pages[-1]
-                            time.sleep(1)  #  REDUCIDO de 3s a 1s
-                            self._destruir_modales()
-                            
-                            try:
-                                btn_ver_mas = self.page.locator("button.show-more-less-html__button").first
-                                btn_ver_mas.click()
-                                time.sleep(0.5)  # ⚡ REDUCIDO
-                            except:
-                                pass
-                            
-                            try:
-                                cuerpo = self.page.locator("main, section.core-rail").first
-                                texto_crudo = cuerpo.inner_text()[:2000]
-                            except:
-                                texto_crudo = self.obtener_texto_pagina()[:2000]
-                            
-                            self.page.close()
-                            self.page = self.page.context.pages[0]
+                        try:
+                            cuerpo = self.page.locator("main, section.core-rail").first
+                            texto_crudo = cuerpo.inner_text()
+                        except:
+                            texto_crudo = self.obtener_texto_pagina()
                         
-                        # Guardar oferta
                         if texto_crudo and len(texto_crudo) > 100:
                             ofertas_recopiladas.append({
                                 "link_oferta": href,
                                 "plataforma_origen": self.plataforma,
-                                "texto_crudo": texto_crudo,
+                                "texto_crudo": texto_crudo[:2000],
                                 "titulo_puesto": titulo
                             })
                             logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:40]}...")
                         
+                        self.page.close()
+                        self.page = self.page.context.pages[0]
                     except Exception as e:
                         logger.error(f"❌ Error en tarjeta {i}: {e}")
                         if len(self.page.context.pages) > 1:
