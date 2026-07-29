@@ -31,9 +31,9 @@ def validar_contenido_semantico(oferta: dict, puesto: str) -> bool:
     elif any(x in puesto_normalizado for x in ["dato", "data", "analyst"]): palabras_clave.extend(DICCIONARIO_AREAS["datos"])
     else: palabras_clave.extend(puesto_normalizado.split())
     return any(p in titulo for p in palabras_clave) or any(p in texto for p in palabras_clave)
-
 def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cleaner: TextCleaner, extractor: AIExtractor) -> Optional[Dict]:
-    texto_crudo, titulo_oferta = oferta.get("texto_crudo", ""), oferta.get("titulo_puesto", "No especificado")
+    texto_crudo = oferta.get("texto_crudo", "")
+    titulo_oferta = oferta.get("titulo_puesto", "No especificado")
     if not texto_crudo or len(texto_crudo) < 50: return None
     
     try:
@@ -51,19 +51,29 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
         bens_list = [b.strip("• \n\r") for b in bens_raw.split("\n") if b.strip() and len(b.strip()) > 5]
         beneficios_comprimidos = "; ".join(bens_list[:5])
         
+        # ✅ 3. CORRECCIÓN DE EMPRESA: Priorizar la extraída del scraper si el NLP falla o devuelve el título
+        empresa_nlp = datos_extraidos.get("empresa", "No especificada")
+        empresa_scraper = oferta.get("empresa_extraida", "")
+        
+        # Si el NLP devuelve "No especificada" o el mismo título, usamos la del scraper
+        if empresa_nlp in ["No especificada", titulo_oferta, ""] and empresa_scraper and len(empresa_scraper) > 3:
+            empresa_final = empresa_scraper
+        else:
+            empresa_final = empresa_nlp
+        
         return {
             "id_oferta": f"{nombre_plataforma[:3].upper()}-{id_unico}",
             "fecha_scraping": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             "plataforma_origen": nombre_plataforma,
-            "link_oferta": oferta.get("link_oferta", ""),
+            "link_oferta": oferta.get("link_oferta", ""), # Ya viene absoluta del scraper
             "titulo_puesto": titulo_oferta if titulo_oferta else datos_extraidos.get("titulo_puesto", "No especificado"),
-            "empresa": datos_extraidos.get("empresa", "No especificada"),
+            "empresa": empresa_final, # ✅ EMPRESA CORREGIDA
             "modalidad": datos_extraidos.get("modalidad", "Presencial"),
             "disponible_hasta": "-",
             "horario": datos_extraidos.get("horario", "Tiempo Completo"),
             "departamento": lugar.capitalize(),
             "area_categoria": categoria_hoja,
-            "descripcion_breve": texto_limpio[:2000],
+            "descripcion_breve": texto_limpio[:2000], # ✅ ASEGURAR 2000 CARACTERES DEL TEXTO LIMPIO
             "requisitos": requisitos_comprimidos if requisitos_comprimidos else "No especificados",
             "beneficios": beneficios_comprimidos if beneficios_comprimidos else "No especificados"
         }
