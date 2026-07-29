@@ -1,5 +1,5 @@
 """
-Módulo: main.py (Con límites dinámicos por portal y optimizado)
+Módulo: main.py (Optimizado con Bucles Invertidos para velocidad)
 """
 import sys, os, time, hashlib, json
 from datetime import datetime
@@ -71,32 +71,10 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
         logger.error(f"❌ Error NLP: {e}")
         return None
 
-def ejecutar_scraper(scraper, nombre: str, puesto: str, lugar: str, limite_ofertas: int, es_playwright: bool = False) -> List[Dict]:
-    logger.info(f"\n📌 RASTREANDO: {nombre}\n" + "-" * 50)
-    try:
-        if es_playwright:
-            ofertas_crudas = scraper.recolectar_ofertas_sync(puesto=puesto, lugar=lugar, limite_ofertas=limite_ofertas, filtro_relevancia_cb=es_titulo_relevante)
-        else:
-            ofertas_crudas = scraper.recolectar_ofertas(url_semilla="", limite_ofertas=limite_ofertas, puesto=puesto, lugar=lugar, filtro_relevancia_cb=es_titulo_relevante)
-        
-        if not ofertas_crudas:
-            logger.warning(f"⚠️ No se extrajeron ofertas de {nombre}.")
-            return []
-            
-        ofertas_validadas = [ofr for ofr in ofertas_crudas if validar_contenido_semantico(ofr, puesto)]
-        logger.info(f"✅ Ofertas purificadas: {len(ofertas_validadas)} de {len(ofertas_crudas)}")
-        return ofertas_validadas
-    except Exception as e:
-        logger.error(f"❌ Error en portal {nombre}: {e}")
-        return []
-    finally:
-        try: scraper.cerrar_navegador()
-        except: pass
-def ejecutar_pipeline(puesto: str = None, lugar: str = None, 
-                     limites_por_portal: dict = None,
+def ejecutar_pipeline(limites_por_portal: dict = None,
                      usar_bumeran: bool = True, usar_computrabajo: bool = True, 
                      usar_linkedin: bool = True, usar_indeed: bool = False,  
-                     usar_nlp: bool = True, progress_callback=None) -> Dict:
+                     usar_nlp: bool = True) -> Dict:
     
     logger.info("=" * 60 + "\n🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI\n" + "=" * 60)
     start_time = time.time()
@@ -105,78 +83,96 @@ def ejecutar_pipeline(puesto: str = None, lugar: str = None,
     try: storage = SheetsHandler()
     except: storage = SheetsHandlerSimulado()
     
-    # ✅ LEER TODAS las búsquedas activas
-    busquedas_a_ejecutar = []
+    # 1. OBTENER TODAS LAS BÚSQUEDAS
+    busquedas_a_ejecutar = storage.obtener_busquedas_activas()
+    if not busquedas_a_ejecutar:
+        return {'success': False, 'error': 'No hay búsquedas activas en Config_Busquedas', 'total_ofertas': 0}
     
-    if puesto is None or lugar is None:
-        logger.info("📋 Leyendo TODAS las búsquedas activas desde Config_Busquedas...")
-        busquedas_activas = storage.obtener_busquedas_activas()
-        if not busquedas_activas:
-            return {'success': False, 'error': 'No hay búsquedas activas', 'total_ofertas': 0}
-        busquedas_a_ejecutar = busquedas_activas
-        logger.info(f"🎯 Se ejecutarán {len(busquedas_a_ejecutar)} búsqueda(s):")
-        for i, b in enumerate(busquedas_a_ejecutar, 1):
-            logger.info(f"   {i}. {b['puesto']} en {b['lugar']}")
-    else:
-        busquedas_a_ejecutar = [{"puesto": puesto, "lugar": lugar}]
+    logger.info(f"🎯 Se ejecutarán {len(busquedas_a_ejecutar)} búsqueda(s):")
+    for i, b in enumerate(busquedas_a_ejecutar, 1):
+        logger.info(f"   {i}. {b['puesto']} en {b['lugar']}")
     
     if limites_por_portal is None:
-        limites_por_portal = {"Computrabajo": 20, "Bumeran": 20, "LinkedIn": 20, "Indeed": 15}
+        limites_por_portal = {"Computrabajo": 20, "Bumeran": 20, "LinkedIn": 20}
     
     total_ofertas_guardadas = 0
     resultados_por_scraper = {}
     todos_los_payloads = []
     
+    # 2. CONFIGURAR PORTALES
+    portales = []
+    if usar_computrabajo: portales.append({'scraper': ComputrabajoScraper(), 'nombre': 'Computrabajo'})
+    if usar_bumeran: portales.append({'scraper': BumeranScraper(), 'nombre': 'Bumeran'})
+    if usar_linkedin: portales.append({'scraper': LinkedInScraper(), 'nombre': 'LinkedIn'})
+    
+    if not portales:
+        return {'success': False, 'error': 'No hay portales activados', 'total_ofertas': 0}
+
     try:
-        # ✅ LOOP: Ejecutar CADA búsqueda configurada
-        for idx_busqueda, busqueda in enumerate(busquedas_a_ejecutar, 1):
-            puesto_actual = busqueda['puesto']
-            lugar_actual = busqueda['lugar']
+        # 🚀 ESTRATEGIA CLAVE: BUCLE EXTERNO POR PORTAL, INTERNO POR BÚSQUEDA
+        for portal in portales:
+            scraper = portal['scraper']
+            nombre_portal = portal['nombre']
+            limite_portal = limites_por_portal.get(nombre_portal, 20)
             
             logger.info(f"\n{'='*60}")
-            logger.info(f"🔍 BÚSQUEDA {idx_busqueda}/{len(busquedas_a_ejecutar)}: '{puesto_actual}' en '{lugar_actual}'")
-            logger.info(f"{'='*60}\n")
+            logger.info(f"🌐 INICIANDO NAVEGADOR PARA: {nombre_portal}")
+            logger.info(f"{'='*60}")
             
-            scrapers_config = []
-            if usar_computrabajo: scrapers_config.append({'scraper': ComputrabajoScraper(), 'nombre': 'Computrabajo', 'es_playwright': False})
-            if usar_bumeran: scrapers_config.append({'scraper': BumeranScraper(), 'nombre': 'Bumeran', 'es_playwright': False})
-            if usar_linkedin: scrapers_config.append({'scraper': LinkedInScraper(), 'nombre': 'LinkedIn', 'es_playwright': False})
-            # if usar_indeed: scrapers_config.append({'scraper': IndeedScraperPlaywright(), 'nombre': 'Indeed', 'es_playwright': True})
+            # ABRIR NAVEGADOR UNA SOLA VEZ POR PORTAL
+            scraper.iniciar_navegador(headless=True)
             
-            if not scrapers_config:
-                return {'success': False, 'error': 'No hay scrapers activados', 'total_ofertas': 0}
-            
-            for idx, config in enumerate(scrapers_config, 1):
-                if progress_callback: progress_callback(idx, len(scrapers_config), f"Ejecutando {config['nombre']}...")
+            try:
+                for busqueda in busquedas_a_ejecutar:
+                    puesto = busqueda['puesto']
+                    lugar = busqueda['lugar']
+                    
+                    logger.info(f"\n🔍 Buscando: '{puesto}' en '{lugar}' (Límite: {limite_portal})")
+                    
+                    # Ejecutar scraping (el scraper usa self.page que ya está abierto)
+                    try:
+                        ofertas_crudas = scraper.recolectar_ofertas(
+                            url_semilla="", 
+                            limite_ofertas=limite_portal, 
+                            puesto=puesto, 
+                            lugar=lugar, 
+                            filtro_relevancia_cb=es_titulo_relevante
+                        )
+                    except Exception as e:
+                        logger.error(f"❌ Fallo en {nombre_portal} para '{puesto}': {e}")
+                        continue
+                    
+                    if not ofertas_crudas:
+                        logger.warning(f"⚠️ 0 ofertas extraídas de {nombre_portal} para '{puesto}'")
+                        continue
+                    
+                    ofertas_validadas = [ofr for ofr in ofertas_crudas if validar_contenido_semantico(ofr, puesto)]
+                    logger.info(f"✅ Ofertas purificadas: {len(ofertas_validadas)} de {len(ofertas_crudas)}")
+                    
+                    # Procesar y guardar
+                    payloads = []
+                    for oferta in ofertas_validadas:
+                        oferta['puesto_buscado'] = puesto
+                        if usar_nlp:
+                            payload = procesar_oferta_con_nlp(oferta, nombre_portal, lugar, cleaner, extractor)
+                            if payload: payloads.append(payload)
+                        else:
+                            payloads.append({"id_oferta": f"{nombre_portal[:3].upper()}-x", "fecha_scraping": datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "plataforma_origen": nombre_portal, "link_oferta": oferta.get("link_oferta", ""), "titulo_puesto": oferta.get("titulo_puesto", ""), "empresa": "N/A", "modalidad": "N/A", "disponible_hasta": "-", "horario": "N/A", "departamento": lugar.capitalize(), "area_categoria": "General", "descripcion_breve": oferta.get("texto_crudo", "")[:2000], "requisitos": "N/A", "beneficios": "N/A"})
+                    
+                    stats = storage.verificar_y_guardar(ofertas_del_scraper=payloads, nombre_scraper=nombre_portal, puesto=puesto, lugar=lugar)
+                    
+                    key_res = f"{nombre_portal}_{puesto.replace(' ', '_')}_{lugar}"
+                    resultados_por_scraper[key_res] = {'extraidas': len(ofertas_validadas), 'guardadas': stats.get('guardadas', 0)}
+                    
+                    total_ofertas_guardadas += stats.get('guardadas', 0)
+                    todos_los_payloads.extend(payloads)
+                    logger.info(f"💾 {nombre_portal}: {stats.get('guardadas', 0)} nuevas guardadas para '{puesto}'")
+                    
+            finally:
+                # CERRAR NAVEGADOR AL TERMINAR TODAS LAS BÚSQUEDAS DE ESTE PORTAL
+                logger.info(f"🔒 Cerrando navegador de {nombre_portal}...")
+                scraper.cerrar_navegador()
                 
-                limite_actual = limites_por_portal.get(config['nombre'], 15)
-                
-                ofertas_validadas = ejecutar_scraper(config['scraper'], config['nombre'], puesto_actual, lugar_actual, limite_actual, config['es_playwright'])
-                if not ofertas_validadas:
-                    key_resultado = f"{config['nombre']}_{puesto_actual.replace(' ', '_')}_{lugar_actual}"
-                    resultados_por_scraper[key_resultado] = {'extraidas': 0, 'guardadas': 0}
-                    continue
-                
-                payloads = []
-                for oferta in ofertas_validadas:
-                    oferta['puesto_buscado'] = puesto_actual
-                    if usar_nlp:
-                        payload = procesar_oferta_con_nlp(oferta, config['nombre'], lugar_actual, cleaner, extractor)
-                        if payload: payloads.append(payload)
-                    else:
-                        payloads.append({"id_oferta": f"{config['nombre'][:3].upper()}-x", "fecha_scraping": datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "plataforma_origen": config['nombre'], "link_oferta": oferta.get("link_oferta", ""), "titulo_puesto": oferta.get("titulo_puesto", ""), "empresa": "N/A", "modalidad": "N/A", "disponible_hasta": "-", "horario": "N/A", "departamento": lugar_actual.capitalize(), "area_categoria": "General", "descripcion_breve": oferta.get("texto_crudo", "")[:2000], "requisitos": "N/A", "beneficios": "N/A"})
-                
-                stats = storage.verificar_y_guardar(ofertas_del_scraper=payloads, nombre_scraper=config['nombre'], puesto=puesto_actual, lugar=lugar_actual)
-                
-                key_resultado = f"{config['nombre']}_{puesto_actual.replace(' ', '_')}_{lugar_actual}"
-                resultados_por_scraper[key_resultado] = {'extraidas': len(ofertas_validadas), 'guardadas': stats.get('guardadas', 0), 'duplicadas': stats.get('duplicadas', 0), 'errores': stats.get('errores', 0)}
-                
-                total_ofertas_guardadas += stats.get('guardadas', 0)
-                todos_los_payloads.extend(payloads)
-                logger.info(f"✅ {config['nombre']}: {stats.get('guardadas', 0)} nuevas para '{puesto_actual}'")
-            
-            if progress_callback: progress_callback(len(scrapers_config), len(scrapers_config), f"✅ Búsqueda {idx_busqueda} completada")
-            
     except Exception as e:
         logger.critical(f"💥 Falla general: {e}")
         import traceback
@@ -193,19 +189,19 @@ if __name__ == "__main__":
     logger.remove()
     logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{message}</cyan>", level="INFO")
     
-    # ✅ CONFIGURACIÓN DINÁMICA DE LÍMITES POR PORTAL
     limites_dinamicos = {
-        "Computrabajo": 80,  # Ejemplo: sacar hasta 20 de aquí
-        "Bumeran": 80,       # Ejemplo: sacar hasta 15 de aquí
-        "LinkedIn": 80,      # Ejemplo: sacar hasta 10 de aquí (LinkedIn es lento)
-        "Indeed": 0          # Desactivado
+        "Computrabajo": 20,
+        "Bumeran": 20,
+        "LinkedIn": 15  # Reducido para ahorrar tiempo
     }
     
     resultados = ejecutar_pipeline(
-        puesto=None, lugar=None, 
-        limites_por_portal=limites_dinamicos, # <-- Se pasa el diccionario
-        usar_bumeran=True, usar_computrabajo=True, usar_linkedin=True,
-        usar_indeed=False, usar_nlp=True
+        limites_por_portal=limites_dinamicos,
+        usar_bumeran=True, 
+        usar_computrabajo=True, 
+        usar_linkedin=True,
+        usar_indeed=False, 
+        usar_nlp=True
     )
     
     if resultados['success']: print(f"\n✅ Pipeline completado: {resultados['total_ofertas']} ofertas guardadas")
