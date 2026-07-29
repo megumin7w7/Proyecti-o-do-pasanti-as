@@ -1,11 +1,10 @@
 """
-Módulo: scrapers/bumeran_scraper.py (Con debug y stealth)
+Módulo: scrapers/bumeran_scraper.py (Con debug snapshots)
 """
 import time
 import re
 from scrapers.base_scraper import BaseScraper
 from loguru import logger
-from playwright_stealth import stealth_sync
 
 class BumeranScraper(BaseScraper):
     """Scraper específico para Bumeran usando Playwright"""
@@ -30,8 +29,7 @@ class BumeranScraper(BaseScraper):
         """Recolecta ofertas de Bumeran."""
         if not self.page:
             self.iniciar_navegador(headless=True)
-            # ✅ APLICAR STEALTH
-            stealth_sync(self.page)
+            # ✅ Ya no necesitamos stealth_sync, base_scraper.py inyecta los scripts anti-detección
             
         ofertas_recopiladas = []
         puesto_slug = puesto.lower().replace(" ", "-")
@@ -41,17 +39,17 @@ class BumeranScraper(BaseScraper):
             while len(ofertas_recopiladas) < limite_ofertas:
                 if pagina_actual == 1:
                     url_busqueda = f"https://www.bumeran.com.pe/empleos-busqueda-{puesto_slug}.html"
-                    logger.info(f" Bumeran (Pág 1): {url_busqueda}")
+                    logger.info(f"🔍 Bumeran (Pág 1): {url_busqueda}")
                     
                     # ✅ LOG DE STATUS HTTP
                     try:
                         response = self.page.goto(url_busqueda, wait_until="networkidle", timeout=30000)
                         if response:
-                            logger.info(f" Status HTTP: {response.status}")
+                            logger.info(f"📡 Status HTTP: {response.status}")
                         else:
-                            logger.warning("️ Sin respuesta del servidor")
+                            logger.warning("⚠️ Sin respuesta del servidor")
                     except Exception as e:
-                        logger.error(f" Error navegando: {e}")
+                        logger.error(f"❌ Error navegando: {e}")
                         self.debug_snapshot("bumeran_error_navegacion")
                         break
                     
@@ -71,7 +69,7 @@ class BumeranScraper(BaseScraper):
                             self.debug_snapshot("bumeran_tras_filtro")
                             
                         except Exception as e:
-                            logger.warning(f"⚠️ No se pudo aplicar filtro de ubicación: {e}")
+                            logger.warning(f"️ No se pudo aplicar filtro de ubicación: {e}")
                 else:
                     # Paginación via URL
                     try:
@@ -87,14 +85,14 @@ class BumeranScraper(BaseScraper):
                         time.sleep(3)
                         self._destruir_modales()
                     except Exception as e:
-                        logger.error(f" Error en paginación: {e}")
+                        logger.error(f"❌ Error en paginación: {e}")
                         break
                 
                 # Scroll para cargar contenido
                 self.scroll_al_final()
                 time.sleep(2)
                 
-                # ✅ ESPERAR EXPLÍCITAMENTE POR ELEMENTOS (no tiempo fijo)
+                # ✅ ESPERAR EXPLÍCITAMENTE POR ELEMENTOS
                 try:
                     self.page.wait_for_selector("a[href*='-aviso-'], a[href*='/empleos/']", timeout=15000)
                     logger.info("✅ Elementos de ofertas detectados")
@@ -113,7 +111,7 @@ class BumeranScraper(BaseScraper):
                     logger.warning(f"⚠️ No hay ofertas en página {pagina_actual}")
                     break
                 
-                logger.info(f"📦 {count} enlaces encontrados")
+                logger.info(f" {count} enlaces encontrados")
                 
                 # Procesar ofertas
                 for i in range(min(count, limite_ofertas - len(ofertas_recopiladas))):
