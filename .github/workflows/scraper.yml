@@ -21,23 +21,26 @@ jobs:
       - name: 📦 Instalar dependencias de Python
         run: |
           python -m pip install --upgrade pip
+          # 1. Dependencias base (las mismas de Streamlit)
           pip install -r requirements.txt
-          pip install playwright-stealth
+          # 2. Dependencias EXCLUSIVAS del scraper (que no están en requirements.txt)
+          pip install spacy playwright playwright-stealth loguru python-dotenv
+          # 3. Descargar modelo de spaCy (AHORA SÍ FUNCIONARÁ porque spacy ya está instalado)
+          python -m spacy download es_core_news_md
 
       - name: 🌐 Instalar Chromium y dependencias del sistema
         run: |
           playwright install chromium
           playwright install-deps chromium
-          python -m spacy download es_core_news_md
 
       - name: 🚀 Ejecutar el Pipeline de Scraping
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         run: python main.py
-        continue-on-error: true  # ✅ CLAVE: Permite que el siguiente paso se ejecute incluso si falla
+        continue-on-error: true  # Permite que el paso de debug se ejecute aunque el scraper falle
 
       - name: 📸 Subir debug (screenshots + HTML)
-        if: always()  # ✅ CLAVE: Se ejecuta siempre, incluso si el job anterior falló
+        if: always()  # Se ejecuta SIEMPRE, incluso si el paso anterior falló
         uses: actions/upload-artifact@v4
         with:
           name: bumeran-debug-artifacts
