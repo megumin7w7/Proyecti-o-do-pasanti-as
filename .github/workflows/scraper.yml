@@ -1,47 +1,53 @@
-name: Pipeline de Scraping Laboral AI
+name: Executar Scraper de Empleos
 
 on:
-  workflow_dispatch: # Permite ejecutarlo manualmente con un botón desde la pestaña Actions
   schedule:
-    - cron: '0 18 * * *' # Todos los días a las 18:00 UTC (1:00 PM hora Perú)
+    - cron: '0 */6 * * *'  # Se ejecuta cada 6 horas (Ajusta si deseas)
+  workflow_dispatch:        # Permite ejecutarlo manualmente desde GitHub
 
 jobs:
-  scrape-jobs:
-    runs-on: ubuntu-latest # Máquina virtual Linux limpia
+  run-scraper:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Descargar el código del repositorio
+      # 1. Obtener el código del repositorio (Versión v4)
+      - name: Checkout del código
         uses: actions/checkout@v4
 
-      - name: 🐍 Configurar Python 3.11
+      # 2. Configurar Python con caché automático para PIP
+      - name: Configurar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip' # ⚡ Guarda en caché las librerías de requirements.txt
 
-      - name: 📦 Instalar dependencias de Python
+      # 3. Instalar librerías de Python
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      # 4. CACHÉ DE PLAYWRIGHT (Evita re-descargar Chromium cada vez)
+      - name: Verificar/Cargar caché de Playwright
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/requirements.txt') }}
+
+      # 5. Instalar Chromium SOLO si no estaba en caché
+      - name: Instalar navegador Playwright
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m playwright install chromium --with-deps
 
-      - name: 🌐 Instalar Chromium y dependencias del sistema
-        run: |
-          playwright install chromium
-          playwright install-deps chromium
-          python -m spacy download es_core_news_md
-
-      - name: 🚀 Ejecutar el Pipeline de Scraping
-        env:
-          # Inyecta tu credencial de Google de forma 100% segura desde los Secrets
-          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
-          # Muestra los logs en vivo en la consola de GitHub Actions sin retrasos de buffering
-          PYTHONUNBUFFERED: "1"
+      # 6. Ejecutar el Scraper
+      - name: Ejecutar Scraper Principal
         run: python main.py
 
-      # 🕵️ PASO DE DIAGNÓSTICO: Guarda cualquier captura realizada durante el proceso
-      - name: 📸 Guardar evidencia de fallos (Debug)
-        if: always() # Se ejecuta siempre, falle o no el script
+      # 7. Subir imágenes si ocurre algún error (Sin generar warnings molestos)
+      - name: Guardar capturas de error (Si existen)
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: bumeran-debug-screenshots
-          path: "*.png" # 👈 Captura cualquier imagen PNG guardada en la raíz
-          if-no-files-found: warn # Te notificará suavemente si no se generó ninguna captura
+          name: capturas-error
+          path: '*.png'
+          if-no-files-found: ignore # ⚡ Silencia el warning si no hay PNGs
