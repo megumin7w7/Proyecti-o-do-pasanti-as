@@ -1,22 +1,43 @@
 """
-Módulo: storage/sheets_handler.py (Diagnóstico detallado de credenciales)
+Módulo: storage/sheets_handler.py
+Maneja la conexión a Google Sheets y provee un fallback simulado si no hay credenciales.
 """
-import gspread
-from google.oauth2.service_account import Credentials
 import os
 import json
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
 from loguru import logger
 from config.settings import GOOGLE_SHEET_NAME, CREDENTIALS_FILE
 
+
+class SheetsHandlerSimulado:
+    """Clase de respaldo cuando no existen credenciales de Google Sheets."""
+    def __init__(self):
+        logger.warning("⚠️ Modo Simulación de Sheets activo (Sin conexión real).")
+
+    def obtener_busquedas_activas((self) -> list:
+        logger.info("📋 [Simulación] Usando búsqueda por defecto.")
+        return [{"puesto": "practicante de datos", "lugar": "lima"}]
+
+    def verificar_y_guardar(self, ofertas_del_scraper: list, nombre_scraper: str, puesto: str, lugar: str) -> dict:
+        total = len(ofertas_del_scraper) if ofertas_del_scraper else 0
+        logger.info(f"📊 [Simulación] {total} ofertas procesadas localmente (No enviadas a Sheets).")
+        return {'guardadas': 0, 'duplicadas': 0, 'errores': 0}
+
+    def actualizar_estado(self, puesto: str, lugar: str):
+        pass
+
+
 class SheetsHandler:
+    """Manejador principal de Google Sheets con soporte para secrets de GitHub."""
     def __init__(self):
         self.client = None
         self.sheet = None
         self._conectar_google_api()
 
     def _conectar_google_api(self):
-        """Se conecta usando Variable de Entorno (GitHub/Render) o archivo local."""
+        """Se conecta usando Variable de Entorno (GitHub Actions) o archivo local."""
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
         
         # 1. Intentar desde Variable de Entorno (GitHub Actions)
@@ -44,7 +65,7 @@ class SheetsHandler:
                 logger.error(f"❌ Error al abrir archivo de credenciales local: {e}")
 
         # 3. Si no hay nada configurado
-        logger.warning("⚠️ No se encontraron credenciales válidas. Modo simulación activado.")
+        logger.warning("⚠️ No se encontraron credenciales válidas.")
 
     def _abrir_o_crear_sheet(self):
         try:
@@ -61,7 +82,8 @@ class SheetsHandler:
             logger.error(f"❌ Error al acceder a '{GOOGLE_SHEET_NAME}': {e}. ¿Compartiste la hoja con el correo de la Service Account?")
 
     def _inicializar_estructura_hojas(self):
-        if not self.sheet: return
+        if not self.sheet:
+            return
         try:
             worksheet_config = self.sheet.get_worksheet(0)
             worksheet_config.update_title("Config_Busquedas")
@@ -140,7 +162,7 @@ class SheetsHandler:
             
             if filas_a_insertar:
                 hoja_real.append_rows(filas_a_insertar, value_input_option="RAW")
-                logger.info(f"💾 ¡Lote procesado! {contador_nuevas} filas nuevas insertadas.")
+                logger.info(f"💾 ¡Lote procesado! {contador_nuevas} filas nuevas insertadas en Google Sheets.")
             
             self.actualizar_estado(puesto, lugar)
             return {'guardadas': contador_nuevas, 'duplicadas': contador_duplicadas, 'errores': 0}
@@ -153,7 +175,8 @@ class SheetsHandler:
             return {'guardadas': 0, 'duplicadas': 0, 'errores': len(ofertas_del_scraper)}
 
     def actualizar_estado(self, puesto: str, lugar: str):
-        if not self.sheet: return
+        if not self.sheet:
+            return
         try:
             worksheet = self.sheet.worksheet("Config_Busquedas")
             registros = worksheet.get_all_values()
