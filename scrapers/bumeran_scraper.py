@@ -1,61 +1,31 @@
 """
-Módulo: scrapers/bumeran_scraper.py (Corregido: Extracción limpia de títulos)
+Módulo: scrapers/bumeran_scraper.py (Con Diagnóstico de Fallos)
 """
-import re
 import time
+import re
 from scrapers.base_scraper import BaseScraper
 from loguru import logger
 
 class BumeranScraper(BaseScraper):
-    """Scraper específico para Bumeran usando Playwright"""
     def __init__(self):
         super().__init__()
         self.plataforma = "Bumeran"
         logger.info("✅ BumeranScraper (Playwright) inicializado")
 
-    def _destruir_modales(self, target_page=None):
-        """Elimina modales con JavaScript."""
-        page_to_use = target_page or self.page
+    def _destruir_modales(self):
         try:
-            page_to_use.evaluate("""
+            self.page.evaluate("""
                 document.querySelectorAll('[class*="banner"], [id*="cookie"], [class*="modal"]').forEach(e => e.remove());
                 document.body.style.overflow = 'auto';
             """)
         except Exception:
             pass
 
-    def _extraer_titulo_limpio(self, enlace_element) -> str:
-        """Extrae el título real ignorando metadatos como 'Actualizado hace X días'"""
-        # Patron Regex para detectar cualquier texto de metadatos/fecha/estado
-        patron_ruido = r'actualizad[oa]|hace|d[ií]as?|ayer|hoy|publicad[oa]|urgente|destacad[oa]|nuevo|empleos'
-
-        # Intentar 1: Buscar por etiquetas HTML típicas de título
-        for selector in ["h2", "h3", "h1", "[class*='Title']", "[class*='title']"]:
-            try:
-                el = enlace_element.locator(selector).first
-                if el.count() > 0:
-                    texto = el.inner_text().strip()
-                    if texto and not re.search(patron_ruido, texto, re.IGNORECASE):
-                        return texto
-            except Exception:
-                pass
-
-        # Intentar 2: Recorrer las líneas de texto de la tarjeta y filtrar ruido
-        try:
-            texto_tarjeta = enlace_element.inner_text()
-            lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip()]
-            for linea in lineas:
-                # Si la línea tiene más de 3 letras y NO contiene palabras de ruido
-                if len(linea) > 3 and not re.search(patron_ruido, linea, re.IGNORECASE):
-                    return linea
-        except Exception:
-            pass
-
-        return ""
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
                           puesto: str = "analista de datos", lugar: str = "lima", 
                           filtro_relevancia_cb=None) -> list:
-        if not self.page: self.iniciar_navegador(headless=True)
+        if not self.page:
+            self.iniciar_navegador(headless=True)
             
         ofertas_recopiladas = []
         puesto_slug = puesto.lower().replace(" ", "-")
@@ -75,40 +45,52 @@ class BumeranScraper(BaseScraper):
                     
                 logger.info(f"🔍 Bumeran (Pág {pagina_actual}): {url_busqueda}")
                 self.navegar_a(url_busqueda)
-                time.sleep(1.5) # ⚡ REDUCIDO de 3s a 1.5s
+                time.sleep(1.5)
                 self._destruir_modales()
                 
                 self.scroll_al_final()
-                time.sleep(1) # ⚡ REDUCIDO de 2s a 1s
+                time.sleep(1)
                 
-                enlaces = self.obtener_elementos("a[href*='-aviso-'], a[href*='/empleos/']")
+                # Selector más estricto para evitar basura
+                enlaces = self.obtener_elementos("a[href*='-aviso-']")
                 count = enlaces.count()
+                
                 if count == 0:
-                    logger.warning(f"⚠️ No hay ofertas en página {pagina_actual}")
+                    logger.warning(f"⚠️ No hay enlaces '-aviso-' en página {pagina_actual}")
                     break
                 
-                logger.info(f"📦 {count} enlaces encontrados")
+                logger.info(f"📦 {count} enlaces potenciales encontrados")
                 
                 for i in range(min(count, limite_ofertas - len(ofertas_recopiladas))):
                     try:
                         enlace = enlaces.nth(i)
                         href = enlace.get_attribute("href")
-                        if href and not href.startswith("http"): href = f"https://www.bumeran.com.pe{href}"
-                        if not href or "busqueda" in href: continue
+                        if href and not href.startswith("http"):
+                            href = f"https://www.bumeran.com.pe{href}"
+                        
+                        if not href or "busqueda" in href:
+                            continue
                         
                         texto_tarjeta = enlace.inner_text()
                         lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip() and len(l.strip()) > 3]
-                        if not lineas: continue
+                        if not lineas:
+                            continue
+                        
                         titulo = lineas[0]
                         
-                        if any(o['link_oferta'] == href for o in ofertas_recopiladas): continue
-                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto): continue
+                        # 🕵️ DIAGNÓSTICO 1: Filtro de relevancia
+                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
+                            logger.debug(f"⏭️ Descartado por filtro: '{titulo}'")
+                            continue
+                        
+                        if any(o['link_oferta'] == href for o in ofertas_recopiladas):
+                            continue
                         
                         self.page.evaluate(f"window.open('{href}', '_blank')")
-                        self.page.wait_for_timeout(500) # ⚡ REDUCIDO
+                        self.page.wait_for_timeout(1000)
                         
                         self.page = self.page.context.pages[-1]
-                        time.sleep(1) # ⚡ REDUCIDO de 2s a 1s
+                        time.sleep(1)
                         self._destruir_modales()
                         
                         try:
@@ -117,12 +99,23 @@ class BumeranScraper(BaseScraper):
                         except:
                             texto_crudo = self.page.inner_text("body")
                         
+                        texto_crudo = re.sub(r'\n\s*\n', '\n', texto_crudo).strip()
+                        
+                        # 🕵️ DIAGNÓSTICO 2: Longitud del texto (Bloqueo CAPTCHA)
                         if texto_crudo and len(texto_crudo) > 150:
-                            ofertas_recopiladas.append({"link_oferta": href, "plataforma_origen": self.plataforma, "texto_crudo": texto_crudo[:2000], "titulo_puesto": titulo})
-                            logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:35]}...")
+                            ofertas_recopiladas.append({
+                                "link_oferta": href,
+                                "plataforma_origen": self.plataforma,
+                                "texto_crudo": texto_crudo[:2000],
+                                "titulo_puesto": titulo
+                            })
+                            logger.info(f"✅ [{len(ofertas_recopiladas)}] Guardada: {titulo[:35]}...")
+                        else:
+                            logger.warning(f"⚠️ Descartada por texto corto ({len(texto_crudo)} chars). Posible bloqueo: '{titulo[:30]}'")
                         
                         self.page.close()
                         self.page = self.page.context.pages[0]
+                        
                     except Exception as e:
                         logger.error(f"❌ Error en oferta {i}: {e}")
                         if len(self.page.context.pages) > 1:
@@ -130,9 +123,12 @@ class BumeranScraper(BaseScraper):
                             self.page = self.page.context.pages[0]
                 
                 pagina_actual += 1
-                if pagina_actual > 5: break # Límite de seguridad
+                if pagina_actual > 5: 
+                    logger.info("🏁 Límite de 5 páginas alcanzado para Bumeran.")
+                    break
+                    
         except Exception as e:
-            logger.error(f"❌ Error crítico: {e}")
+            logger.error(f"❌ Error crítico en Bumeran: {e}")
         
-        logger.info(f"✅ Total Bumeran: {len(ofertas_recopiladas)} ofertas extraídas")
+        logger.info(f"✅ Total Bumeran: {len(ofertas_recopiladas)} ofertas extraídas con éxito")
         return ofertas_recopiladas
