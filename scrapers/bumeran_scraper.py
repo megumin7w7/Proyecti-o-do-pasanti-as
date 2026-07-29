@@ -1,5 +1,5 @@
 """
-Módulo: scrapers/bumeran_scraper.py (Corregido con selectores universales)
+Módulo: scrapers/bumeran_scraper.py (Con diagnóstico y selectores universales)
 """
 import time
 import re
@@ -34,7 +34,7 @@ class BumeranScraper(BaseScraper):
         
         try:
             while len(ofertas_recopiladas) < limite_ofertas:
-                # Construir URL correcta
+                # URL correcta con ubicación
                 if lugar_slug and pagina_actual == 1:
                     url_busqueda = f"https://www.bumeran.com.pe/en-{lugar_slug}/empleos-busqueda-{puesto_slug}.html"
                 else:
@@ -49,46 +49,53 @@ class BumeranScraper(BaseScraper):
                 time.sleep(2)
                 self._destruir_modales()
                 
-                # 🕵️ DEBUG: Imprimir todos los enlaces que encontramos para diagnóstico
-                todos_los_enlaces = self.obtener_elementos("a")
-                logger.debug(f"🔍 Total de enlaces <a> en la página: {todos_los_enlaces.count()}")
+                # 🕵️ DEBUG: Inspeccionar TODOS los enlaces para encontrar el patrón
+                todos_links = self.obtener_elementos("a")
+                logger.debug(f"🔍 Total enlaces <a> en página: {todos_links.count()}")
                 
-                # Imprimir los primeros 10 hrefs para ver el patrón
-                for i in range(min(10, todos_los_enlaces.count())):
+                # Imprimir primeros 20 hrefs para ver el patrón real
+                for i in range(min(20, todos_links.count())):
                     try:
-                        href = todos_los_enlaces.nth(i).get_attribute("href")
+                        href = todos_links.nth(i).get_attribute("href")
+                        texto = todos_links.nth(i).inner_text()[:50]
                         if href and "http" in href:
-                            logger.debug(f"   Link {i}: {href[:100]}")
+                            logger.debug(f"   Link {i}: {href[:80]} | Texto: '{texto}'")
                     except:
                         pass
                 
-                # ✅ ESTRATEGIA 1: Buscar por clases de tarjetas de empleo (más confiable)
+                # ✅ ESTRATEGIA: Probar múltiples selectores hasta encontrar uno que funcione
                 selectores_posibles = [
-                    "a[href*='/empleo/']",           # Patrón moderno: /empleo/xxx
-                    "a[href*='/empleos/']",          # Patrón alternativo
-                    ".job-card a",                   # Tarjetas con clase job-card
-                    ".offer-card a",                 # Tarjetas con clase offer-card  
-                    "[class*='job'] a",              # Cualquier clase que contenga 'job'
-                    "[class*='offer'] a",            # Cualquier clase que contenga 'offer'
-                    "a[href]",                       # Cualquier enlace (fallback)
+                    "a[href*='/empleo/']",           # Patrón moderno
+                    "a[href*='/empleos/']",          # Alternativo
+                    ".job-card a",                   # Por clase
+                    ".offer-card a",
+                    "[class*='job'] a",
+                    "article a[href]",               # Artículos de ofertas
+                    "div[data-qa='offer'] a",        # Data attributes
                 ]
                 
                 enlaces = None
+                selector_usado = ""
                 for selector in selectores_posibles:
                     try:
                         enlaces = self.obtener_elementos(selector)
                         count = enlaces.count()
                         if count > 0:
+                            selector_usado = selector
                             logger.info(f"✅ Selector '{selector}' encontró {count} enlaces")
                             break
-                    except:
+                    except Exception as e:
+                        logger.debug(f"Selector '{selector}' falló: {e}")
                         continue
                 
                 if not enlaces or enlaces.count() == 0:
-                    logger.warning(f"⚠️ No se encontraron enlaces con ningún selector en página {pagina_actual}")
+                    logger.warning(f"⚠️ No se encontraron enlaces con NINGÚN selector en página {pagina_actual}")
+                    # Guardar screenshot para debug
+                    self.page.screenshot(path=f"bumeran_debug_p{pagina_actual}.png")
+                    logger.info("📸 Screenshot guardado para diagnóstico")
                     break
                 
-                # Filtrar solo los que parecen ofertas reales (no footer, no navegación)
+                # Filtrar solo ofertas válidas
                 enlaces_filtrados = []
                 for i in range(enlaces.count()):
                     try:
@@ -96,20 +103,22 @@ class BumeranScraper(BaseScraper):
                         href = enlace.get_attribute("href")
                         texto = enlace.inner_text().strip()
                         
-                        # Filtrar enlaces que NO son de ofertas
                         if not href:
                             continue
                         if "busqueda" in href or "login" in href or "registro" in href:
                             continue
-                        if len(texto) < 10:  # Enlaces muy cortos suelen ser iconos o navegación
+                        if len(texto) < 15:  # Muy corto = probablemente no es oferta
                             continue
-                        if any(x in href.lower() for x in [".com.pe/", "bumeran.com"]):
-                            # Es un enlace interno válido
-                            enlaces_filtrados.append((enlace, href, texto))
+                        
+                        # Completar URL si es relativa
+                        if not href.startswith("http"):
+                            href = f"https://www.bumeran.com.pe{href}"
+                        
+                        enlaces_filtrados.append((enlace, href, texto))
                     except:
                         continue
                 
-                logger.info(f" {len(enlaces_filtrados)} enlaces de ofertas válidos encontrados")
+                logger.info(f"📦 {len(enlaces_filtrados)} ofertas válidas encontradas")
                 
                 if len(enlaces_filtrados) == 0:
                     logger.warning(f"⚠️ No hay ofertas válidas en página {pagina_actual}")
@@ -121,11 +130,7 @@ class BumeranScraper(BaseScraper):
                         break
                     
                     try:
-                        # Completar URL si es relativa
-                        if href and not href.startswith("http"):
-                            href = f"https://www.bumeran.com.pe{href}"
-                        
-                        # Limpiar título (primera línea no vacía)
+                        # Limpiar título
                         lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip() and len(l.strip()) > 3]
                         if not lineas:
                             continue
@@ -141,11 +146,10 @@ class BumeranScraper(BaseScraper):
                             continue
                         
                         # Abrir oferta
-                        logger.debug(f" Abriendo: {titulo[:40]}...")
+                        logger.debug(f"🔗 Abriendo: {titulo[:40]}...")
                         self.page.evaluate(f"window.open('{href}', '_blank')")
                         self.page.wait_for_timeout(1000)
                         
-                        # Cambiar a nueva pestaña
                         self.page = self.page.context.pages[-1]
                         time.sleep(1.5)
                         self._destruir_modales()
@@ -159,7 +163,6 @@ class BumeranScraper(BaseScraper):
                         
                         texto_crudo = re.sub(r'\n\s*\n', '\n', texto_crudo).strip()
                         
-                        # Validar que tenga contenido suficiente
                         if texto_crudo and len(texto_crudo) > 150:
                             ofertas_recopiladas.append({
                                 "link_oferta": href,
@@ -170,8 +173,9 @@ class BumeranScraper(BaseScraper):
                             logger.info(f"✅ [{len(ofertas_recopiladas)}] Guardada: {titulo[:35]}...")
                         else:
                             logger.warning(f"⚠️ Descartada (texto corto: {len(texto_crudo)} chars): {titulo[:30]}")
+                            # Guardar screenshot de la oferta fallida
+                            self.page.screenshot(path=f"bumeran_oferta_fallida.png")
                         
-                        # Cerrar y volver
                         self.page.close()
                         self.page = self.page.context.pages[0]
                         
@@ -183,7 +187,7 @@ class BumeranScraper(BaseScraper):
                 
                 pagina_actual += 1
                 if pagina_actual > 5:
-                    logger.info("🏁 Límite de 5 páginas alcanzado.")
+                    logger.info(" Límite de 5 páginas alcanzado.")
                     break
                     
         except Exception as e:
