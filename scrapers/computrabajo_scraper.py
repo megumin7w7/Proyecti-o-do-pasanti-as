@@ -23,101 +23,65 @@ class ComputrabajoScraper(BaseScraper):
             logger.debug("🛡️ Modales eliminados")
         except Exception:
             pass
-
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
                           puesto: str = None, lugar: str = None, filtro_relevancia_cb=None) -> list:
-        """Recolecta ofertas de Computrabajo usando paginación dinámica."""
-        if not self.page:
-            self.iniciar_navegador(headless=True)
+        if not self.page: self.iniciar_navegador(headless=True)
             
         ofertas_recopiladas = []
         pagina_actual = 1
         MAX_PAGINAS = 30
         
-        # Construir URL de búsqueda
         puesto_query = puesto.lower().replace(" ", "-") if puesto else ""
         lugar_query = lugar.lower().replace(" ", "-") if lugar else ""
         
-        if puesto_query and lugar_query:
-            url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}-en-{lugar_query}"
-        elif puesto_query:
-            url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}"
-        else:
-            url_base = url_semilla.rstrip('/')
+        if puesto_query and lugar_query: url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}-en-{lugar_query}"
+        elif puesto_query: url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}"
+        else: url_base = url_semilla.rstrip('/')
         
         try:
             while pagina_actual <= MAX_PAGINAS and len(ofertas_recopiladas) < limite_ofertas:
                 url_pagina = f"{url_base}?p={pagina_actual}"
                 logger.info(f"📄 Página {pagina_actual}: {url_pagina}")
-                
                 self.navegar_a(url_pagina)
-                time.sleep(2)
+                time.sleep(1) # ⚡ REDUCIDO de 2s a 1s
                 self._eliminar_obstaculos()
                 
-                # Buscar ofertas (selector principal de Computrabajo)
                 ofertas_locator = self.obtener_elementos("a.js-o-link")
                 count = ofertas_locator.count()
-                
                 if count == 0:
                     logger.warning(f"🏁 No hay más ofertas en página {pagina_actual}")
                     break
                 
                 logger.info(f"📦 {count} ofertas encontradas en página {pagina_actual}")
                 
-                # Procesar cada oferta
                 for i in range(min(count, limite_ofertas - len(ofertas_recopiladas))):
                     try:
                         oferta_elem = ofertas_locator.nth(i)
                         href = oferta_elem.get_attribute("href")
-                        
-                        # ✅ FIX: Completar URL si es relativa
-                        if href and not href.startswith("http"):
-                            href = f"https://pe.computrabajo.com{href}"
-                        
                         titulo = oferta_elem.inner_text().strip()
-                        if not href or not titulo:
-                            continue
-                        if any(o['link_oferta'] == href for o in ofertas_recopiladas):
-                            continue
-                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
-                            continue
+                        if not href or not titulo: continue
+                        if any(o['link_oferta'] == href for o in ofertas_recopiladas): continue
+                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto): continue
                         
-                        # Abrir oferta en nueva pestaña
                         self.page.evaluate(f"window.open('{href}', '_blank')")
-                        self.page.wait_for_timeout(1000)
+                        self.page.wait_for_timeout(500) # ⚡ REDUCIDO de 1000ms a 500ms
                         
-                        # Cambiar a la nueva pestaña
                         self.page = self.page.context.pages[-1]
-                        time.sleep(1)
+                        time.sleep(0.5) # ⚡ REDUCIDO de 1s a 0.5s
                         
-                        # ✅ FIX: Extraer solo el contenedor principal, no todo el body
-                        try:
-                            cuerpo = self.page.locator("main, section.job-description, div.offer_requirements").first
-                            texto_crudo = cuerpo.inner_text()[:2000]  # Limitado a 2000 chars
-                        except:
-                            texto_crudo = self.obtener_texto_pagina()[:2000]
-                        
+                        texto_crudo = self.obtener_texto_pagina()
                         if texto_crudo and len(texto_crudo) > 50:
-                            ofertas_recopiladas.append({
-                                "link_oferta": href,
-                                "plataforma_origen": self.plataforma,
-                                "texto_crudo": texto_crudo,
-                                "titulo_puesto": titulo
-                            })
+                            ofertas_recopiladas.append({"link_oferta": href, "plataforma_origen": self.plataforma, "texto_crudo": texto_crudo[:2000], "titulo_puesto": titulo})
                             logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:40]}...")
                         
-                        # Cerrar pestaña y volver al listado
                         self.page.close()
                         self.page = self.page.context.pages[0]
-                        
                     except Exception as e:
                         logger.error(f"❌ Error procesando oferta {i}: {e}")
                         if len(self.page.context.pages) > 1:
                             self.page.close()
                             self.page = self.page.context.pages[0]
-                
                 pagina_actual += 1
-                
         except Exception as e:
             logger.error(f"❌ Error crítico en scraping: {e}")
         
