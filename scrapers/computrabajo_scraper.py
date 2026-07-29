@@ -25,7 +25,6 @@ class ComputrabajoScraper(BaseScraper):
             pass
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
                           puesto: str = None, lugar: str = None, filtro_relevancia_cb=None) -> list:
-        if not self.page: self.iniciar_navegador(headless=True)
             
         ofertas_recopiladas = []
         pagina_actual = 1
