@@ -1,14 +1,5 @@
-# Dependencias del Dashboard (Streamlit)
 streamlit
 pandas
 gspread
 google-auth
 requests
-
-# Dependencias del Scraper (GitHub Actions)
-playwright
-playwright-stealth
-loguru
-spacy
-https://github.com/explosion/spacy-models/releases/download/es_core_news_md-3.7.0/es_core_news_md-3.7.0-py3-none-any.whl
-python-dotenv
