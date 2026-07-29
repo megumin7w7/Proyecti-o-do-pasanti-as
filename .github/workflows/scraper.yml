@@ -1,55 +1,48 @@
-name: Executar Scraper de Empleos
+name: Pipeline de Scraping Laboral AI
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'  # Se ejecuta cada 6 horas (Ajusta si deseas)
-  workflow_dispatch:        # Permite ejecutarlo manualmente desde GitHub
+    - cron: '0 18 * * *'
 
 jobs:
-  run-scraper:
+  scrape-jobs:
     runs-on: ubuntu-latest
-
+    
     steps:
-      # 1. Obtener el código del repositorio (Versión v4)
-      - name: Checkout del código
+      - name: 📥 Descargar el código del repositorio
         uses: actions/checkout@v4
 
-      # 2. Configurar Python con caché automático para PIP
-      - name: Configurar Python
+      - name: 🐍 Configurar Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip' # ⚡ Guarda en caché las librerías de requirements.txt
 
-      # 3. Instalar librerías de Python
-      - name: Instalar dependencias
-        run: pip install -r requirements.txt
-
-      # 4. CACHÉ DE PLAYWRIGHT (Evita re-descargar Chromium cada vez)
-      - name: Verificar/Cargar caché de Playwright
-        uses: actions/cache@v4
-        id: playwright-cache
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('**/requirements.txt') }}
-
-      # 5. Instalar Chromium SOLO si no estaba en caché
-      - name: Instalar navegador Playwright
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+      - name: 📦 Instalar dependencias de Python
         run: |
-          python -m playwright install chromium --with-deps
+          python -m pip install --upgrade pip
+          # 1. Instalar lo básico del requirements.txt (para Streamlit y base)
+          pip install -r requirements.txt
+          # 2. Instalar dependencias pesadas EXCLUSIVAS del scraper (GitHub Actions)
+          pip install playwright playwright-stealth loguru spacy python-dotenv
+          python -m spacy download es_core_news_md
 
-      # 6. Ejecutar el Scraper Principal (PASANDO LAS CREDENCIALES)
-      - name: Ejecutar Scraper Principal
+      - name: 🌐 Instalar Chromium y dependencias del sistema
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: 🚀 Ejecutar el Pipeline de Scraping
         env:
-          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }} # 🔑 Pasa el secret a Python
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         run: python main.py
 
-      # 7. Subir imágenes si ocurre algún error (Sin generar warnings molestos)
-      - name: Guardar capturas de error (Si existen)
-        uses: actions/upload-artifact@v4
+      - name: 📸 Guardar evidencia de fallos (Debug)
         if: always()
+        uses: actions/upload-artifact@v4
         with:
-          name: capturas-error
-          path: '*.png'
-          if-no-files-found: ignore # ⚡ Silencia el warning si no hay PNGs
+          name: bumeran-debug-screenshots
+          path: |
+            bumeran_bloqueo.png
+            bumeran_vacia.png
+          if-no-files-found: ignore
