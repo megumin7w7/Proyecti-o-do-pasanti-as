@@ -1,5 +1,5 @@
 """
-Módulo: scrapers/bumeran_scraper.py (URLs corregidas con patrón /en-lugar/)
+Módulo: scrapers/bumeran_scraper.py (Corregido y Optimizado para Playwright)
 """
 import re
 import time
@@ -13,10 +13,11 @@ class BumeranScraper(BaseScraper):
         self.plataforma = "Bumeran"
         logger.info("✅ BumeranScraper (Playwright) inicializado")
 
-    def _destruir_modales(self):
+    def _destruir_modales(self, target_page=None):
         """Elimina modales con JavaScript."""
+        page_to_use = target_page or self.page
         try:
-            self.page.evaluate("""
+            page_to_use.evaluate("""
                 document.querySelectorAll('[class*="banner"], [id*="cookie"], [class*="modal"]').forEach(e => e.remove());
                 document.body.style.overflow = 'auto';
             """)
@@ -26,7 +27,7 @@ class BumeranScraper(BaseScraper):
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
                            puesto: str = "analista de datos", lugar: str = "lima", 
                            filtro_relevancia_cb=None) -> list:
-        """Recolecta ofertas de Bumeran con URLs correctas."""
+        """Recolecta ofertas de Bumeran con extracción limpia y manejo seguro de pestañas."""
         if not self.page:
             self.iniciar_navegador(headless=True)
             
@@ -37,24 +38,19 @@ class BumeranScraper(BaseScraper):
         
         try:
             while len(ofertas_recopiladas) < limite_ofertas:
-                # ✅ URL CORRECTA SEGÚN PATRÓN DE BUMERAN
-                if lugar_slug and pagina_actual == 1:
-                    # Con ubicación: /en-lima/empleos-busqueda-puesto.html
-                    url_busqueda = f"https://www.bumeran.com.pe/en-{lugar_slug}/empleos-busqueda-{puesto_slug}.html"
+                # ✅ MANTENER LA UBICACIÓN EN TODAS LAS PÁGINAS DE BÚSQUEDA
+                if lugar_slug:
+                    base_url = f"https://www.bumeran.com.pe/en-{lugar_slug}/empleos-busqueda-{puesto_slug}.html"
                 else:
-                    # Sin ubicación: /empleos-busqueda-puesto.html
-                    url_busqueda = f"https://www.bumeran.com.pe/empleos-busqueda-{puesto_slug}.html"
+                    base_url = f"https://www.bumeran.com.pe/empleos-busqueda-{puesto_slug}.html"
                 
-                if pagina_actual > 1:
-                    conector = "&" if "?" in url_busqueda else "?"
-                    url_busqueda = f"{url_busqueda}{conector}page={pagina_actual}"
+                url_busqueda = base_url if pagina_actual == 1 else f"{base_url}?page={pagina_actual}"
                     
                 logger.info(f"🔍 Bumeran (Pág {pagina_actual}): {url_busqueda}")
                 self.navegar_a(url_busqueda)
                 time.sleep(3)
                 self._destruir_modales()
                 
-                # Scroll para cargar contenido
                 self.scroll_al_final()
                 time.sleep(2)
                 
@@ -68,79 +64,85 @@ class BumeranScraper(BaseScraper):
                 
                 logger.info(f"📦 {count} enlaces encontrados")
                 
-                # Procesar ofertas
                 for i in range(min(count, limite_ofertas - len(ofertas_recopiladas))):
                     try:
                         enlace = enlaces.nth(i)
                         href = enlace.get_attribute("href")
                         
-                        # Completar URL si es relativa
                         if href and not href.startswith("http"):
                             href = f"https://www.bumeran.com.pe{href}"
                         
                         if not href or "busqueda" in href:
                             continue
                         
-                        # Obtener título de la tarjeta
-                        texto_tarjeta = enlace.inner_text()
-                        lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip() and len(l.strip()) > 3]
-                        if not lineas:
+                        # ✅ EXTRACCIÓN ROBUSTA DEL TÍTULO
+                        titulo = ""
+                        try:
+                            # Buscar elemento h2, h3 o clase de título dentro de la tarjeta
+                            titulo_el = enlace.locator("h2, h3, [class*='title'], [class*='Title']").first
+                            if titulo_el.count() > 0:
+                                titulo = titulo_el.inner_text().strip()
+                        except Exception:
+                            pass
+
+                        # Fallback: Extraer filtrando etiquetas comunes (Destacado, Urgente, etc.)
+                        if not titulo:
+                            texto_tarjeta = enlace.inner_text()
+                            lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip() and len(l.strip()) > 3]
+                            lineas_filtradas = [
+                                l for l in lineas 
+                                if not any(bad in l.lower() for bad in ["destacado", "hace ", "urgente", "nuevo", "publicado", "días", "ayer", "hoy"])
+                            ]
+                            titulo = lineas_filtradas[0] if lineas_filtradas else (lineas[0] if lineas else "")
+
+                        if not titulo:
                             continue
-                        
-                        titulo = lineas[0]
-                        
+
                         # 1. Verificar duplicados
                         if any(o['link_oferta'] == href for o in ofertas_recopiladas):
-                            logger.debug(f"⏭️ Descartado (Duplicado): {titulo[:30]}")
+                            logger.info(f"⏭️ Descartado (Duplicado): {titulo[:30]}")
                             continue
                             
                         # 2. Filtro de relevancia
                         if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
-                            logger.debug(f"⏭️ Descartado (No relevante): '{titulo}' vs '{puesto}'")
+                            logger.info(f"⏭️ Descartado (No relevante): '{titulo}' vs '{puesto}'")
                             continue
                         
-                        # Abrir oferta en nueva pestaña
-                        self.page.evaluate(f"window.open('{href}', '_blank')")
-                        self.page.wait_for_timeout(1500)
-                        
-                        # Cambiar a nueva pestaña
-                        self.page = self.page.context.pages[-1]
-                        time.sleep(2)
-                        self._destruir_modales()
-                        
-                        # Extraer texto
+                        # ✅ NAVEGACIÓN SEGURA A LA OFERTA
+                        detalle_page = self.page.context.new_page()
                         try:
-                            cuerpo = self.page.locator("main, section, div.job-description").first
-                            texto_crudo = cuerpo.inner_text()
-                        except Exception:
-                            texto_crudo = self.page.inner_text("body")
-                        
-                        texto_crudo = re.sub(r'\n\s*\n', '\n', texto_crudo).strip()
-                        
-                        # 3. Validar longitud del texto
-                        if texto_crudo and len(texto_crudo) > 150:
-                            ofertas_recopiladas.append({
-                                "link_oferta": href,
-                                "plataforma_origen": self.plataforma,
-                                "texto_crudo": texto_crudo[:2000],
-                                "titulo_puesto": titulo
-                            })
-                            logger.info(f"✅ [{len(ofertas_recopiladas)}] Guardada: {titulo[:35]}...")
-                        else:
-                            logger.warning(f"⚠️ Descartado (Texto muy corto < 150 chars, posible bloqueo CAPTCHA): {titulo[:30]}")
-                        
-                        # Cerrar y volver
-                        self.page.close()
-                        self.page = self.page.context.pages[0]
+                            detalle_page.goto(href, timeout=20000, wait_until="domcontentloaded")
+                            time.sleep(1.5)
+                            self._destruir_modales(detalle_page)
+                            
+                            try:
+                                cuerpo = detalle_page.locator("main, section, div.job-description, div[class*='description']").first
+                                texto_crudo = cuerpo.inner_text()
+                            except Exception:
+                                texto_crudo = detalle_page.inner_text("body")
+                            
+                            texto_crudo = re.sub(r'\n\s*\n', '\n', texto_crudo).strip()
+                            
+                            # 3. Validar longitud del texto
+                            if texto_crudo and len(texto_crudo) > 150:
+                                ofertas_recopiladas.append({
+                                    "link_oferta": href,
+                                    "plataforma_origen": self.plataforma,
+                                    "texto_crudo": texto_crudo[:2000],
+                                    "titulo_puesto": titulo
+                                })
+                                logger.info(f"✅ [{len(ofertas_recopiladas)}] Guardada: {titulo[:35]}...")
+                            else:
+                                logger.warning(f"⚠️ Descartado (Texto muy corto < 150 chars): {titulo[:30]}")
+                        finally:
+                            # Garantiza que la pestaña siempre se cierre sin afectar la página principal
+                            detalle_page.close()
                         
                     except Exception as e:
                         logger.error(f"❌ Error en oferta {i}: {e}")
-                        if len(self.page.context.pages) > 1:
-                            self.page.close()
-                            self.page = self.page.context.pages[0]
                 
                 pagina_actual += 1
-                if pagina_actual > 5:  # Límite de seguridad
+                if pagina_actual > 5:
                     break
                     
         except Exception as e:
