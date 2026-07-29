@@ -1,5 +1,5 @@
 """
-Módulo: scrapers/bumeran_scraper.py (Corrección de extracción de título)
+Módulo: scrapers/bumeran_scraper.py (Extracción de título robusta y logs visibles)
 """
 import time
 import re
@@ -88,22 +88,30 @@ class BumeranScraper(BaseScraper):
                         if not href.startswith("http"):
                             href = f"https://www.bumeran.com.pe{href}"
                         
-                        # ✅ CORRECCIÓN CLAVE: Extraer el título explícitamente del h2 o h3, no de la primera línea
-                        try:
-                            titulo_elem = enlace.locator("h2, h3").first
-                            titulo = titulo_elem.inner_text().strip()
-                        except Exception:
-                            # Fallback: tomar la primera línea con más de 15 caracteres
-                            texto_tarjeta = enlace.inner_text()
-                            lineas = [l.strip() for l in texto_tarjeta.split('\n') if len(l.strip()) > 15]
-                            titulo = lineas[0] if lineas else "Sin título"
+                        # ✅ CORRECCIÓN CLAVE: Extraer el título ignorando metadata corta
+                        texto_tarjeta = enlace.inner_text()
+                        lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip()]
+                        
+                        titulo = "Sin título"
+                        for linea in lineas:
+                            # Buscamos una línea larga que no sea metadata común
+                            if len(linea) > 20 and not any(x in linea.lower() for x in ["publicado", "hace", "días", "lima", "presencial", "remoto", "híbrido"]):
+                                titulo = linea
+                                break
+                        
+                        # Fallback: si no se encontró, usar la primera línea con > 15 caracteres
+                        if titulo == "Sin título":
+                            for linea in lineas:
+                                if len(linea) > 15:
+                                    titulo = linea
+                                    break
                         
                         if any(o['link_oferta'] == href for o in ofertas_recopiladas):
                             continue
                         
-                        # ✅ LOG DE DEPURACIÓN: Ver si el filtro lo está descartando
+                        # ✅ LOG VISIBLE: Ahora usamos WARNING para que SÍ se vea en la consola
                         if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
-                            logger.debug(f"⏭️ Descartado por filtro: '{titulo}'")
+                            logger.warning(f"⏭️ DESCARTADO POR FILTRO: '{titulo}' (buscando: '{puesto}')")
                             continue
                         
                         # Abrir oferta
@@ -122,8 +130,8 @@ class BumeranScraper(BaseScraper):
                                 "texto_crudo": texto_crudo[:3000],
                                 "titulo_puesto": titulo
                             })
-                            # ✅ Cambiado a INFO para que lo veas en los logs
-                            logger.info(f"✅ [{len(ofertas_recopiladas)}] Guardada: {titulo[:40]}...")
+                            # ✅ LOG VISIBLE: Confirmación de guardado
+                            logger.info(f"✅ [{len(ofertas_recopiladas)}] GUARDADA: {titulo[:40]}...")
                         
                         self.page.close()
                         self.page = self.page.context.pages[0]
