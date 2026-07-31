@@ -39,43 +39,44 @@ class LinkedInScraper(BaseScraper):
                 titulo = tarjeta.inner_text().strip()
                 
                 if not href: continue
-                
-                # Limpiar los excesivos parámetros de rastreo que LinkedIn añade a las URLs
                 href = href.split('?')[0]
-                
                 if any(o["link_oferta"] == href for o in ofertas): continue
                 
-                # Cargar la tarjeta en pestaña nueva
                 with self.context.expect_page() as nueva_pag_info:
                     self.page.evaluate(f"window.open('{href}', '_blank')")
                 
                 nueva_pag = nueva_pag_info.value
-                nueva_pag.wait_for_load_state("commit")
-                
-                # Cerrar modal persistente de "Inicia Sesión" si aparece
-                try:
-                    nueva_pag.evaluate("document.querySelectorAll('button.modal__dismiss, button.sign-in-modal__dismiss').forEach(b => b.click())")
-                except: 
-                    pass
                 
                 try:
-                    # Div exacto donde LinkedIn coloca la descripción de la oferta
-                    desc_locator = nueva_pag.locator("div.show-more-less-html__markup, div.description__text").first
-                    texto_crudo = desc_locator.inner_text()[:3000]
-                except:
-                    texto_crudo = nueva_pag.inner_text("body")[:3000]
+                    # Límite de 5 segundos para cargar la tarjeta
+                    nueva_pag.wait_for_load_state("domcontentloaded", timeout=5000)
                     
-                if texto_crudo and len(texto_crudo) > 50:
-                    ofertas.append({
-                        "link_oferta": href, 
-                        "plataforma_origen": self.plataforma,
-                        "texto_crudo": texto_crudo, 
-                        "titulo_puesto": titulo
-                    })
-                    self.logger.info(f"📦 Extrayendo: {titulo[:40]}")
+                    try:
+                        nueva_pag.evaluate("document.querySelectorAll('button.modal__dismiss, button.sign-in-modal__dismiss').forEach(b => b.click())")
+                    except: 
+                        pass
                     
-                nueva_pag.close()
+                    try:
+                        desc_locator = nueva_pag.locator("div.show-more-less-html__markup, div.description__text").first
+                        # Límite de 3 segundos para extraer texto
+                        texto_crudo = desc_locator.inner_text(timeout=3000)[:3000]
+                    except:
+                        texto_crudo = nueva_pag.inner_text("body", timeout=3000)[:3000]
+                        
+                    if texto_crudo and len(texto_crudo) > 50:
+                        ofertas.append({
+                            "link_oferta": href, 
+                            "plataforma_origen": self.plataforma,
+                            "texto_crudo": texto_crudo, 
+                            "titulo_puesto": titulo
+                        })
+                        self.logger.info(f"📦 Extrayendo: {titulo[:40]}")
+                        
+                except Exception as inner_e:
+                    self.logger.debug(f"Saltando oferta de LinkedIn por demora: {inner_e}")
+                finally:
+                    # Garantiza el cierre de la pestaña pase lo que pase
+                    nueva_pag.close()
+                    
             except Exception as e:
-                self.logger.debug(f"Error procesando tarjeta LinkedIn: {e}")
-                
-        return ofertas
+                self.logger.debug(f"Error crítico en tarjeta LinkedIn: {e}")
