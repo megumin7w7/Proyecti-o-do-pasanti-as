@@ -1,6 +1,7 @@
 """
 Módulo: storage/sheets_handler.py
-Maneja la conexión a Google Sheets y provee un fallback simulado si no hay credenciales.
+Maneja la conexión a Google Sheets y provee un fallback simulado.
+Optimizado con Caché de IDs para evitar Rate Limiting (Error 429).
 """
 import os
 import json
@@ -10,9 +11,7 @@ from datetime import datetime
 from loguru import logger
 from config.settings import GOOGLE_SHEET_NAME, CREDENTIALS_FILE
 
-
 class SheetsHandlerSimulado:
-    """Clase de respaldo cuando no existen credenciales de Google Sheets."""
     def __init__(self):
         logger.warning("⚠️ Modo Simulación de Sheets activo (Sin conexión real).")
 
@@ -28,23 +27,20 @@ class SheetsHandlerSimulado:
     def actualizar_estado(self, puesto: str, lugar: str):
         pass
 
-
 class SheetsHandler:
-    """Manejador principal de Google Sheets con soporte para secrets de GitHub."""
     def __init__(self):
         self.client = None
         self.sheet = None
+        self.ids_cacheados = set()
         self._conectar_google_api()
+        self._cargar_cache_ids()
 
     def _conectar_google_api(self):
-        """Se conecta usando Variable de Entorno (GitHub Actions) o archivo local."""
         scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-        
-        # 1. Intentar desde Variable de Entorno (GitHub Actions)
         creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
         if creds_json:
             try:
-                logger.info("🔑 Conectando con Google Sheets (desde Variable de Entorno)...")
+                logger.info("🔑 Conectando con Google Sheets (desde Entorno)...")
                 creds_dict = json.loads(creds_json)
                 creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
                 self.client = gspread.authorize(creds)
@@ -53,7 +49,6 @@ class SheetsHandler:
             except Exception as e:
                 logger.error(f"❌ Error al autenticar con GOOGLE_CREDENTIALS_JSON: {e}")
 
-        # 2. Intentar desde archivo local (Desarrollo en PC)
         if os.path.exists(CREDENTIALS_FILE):
             try:
                 logger.info(f"🔑 Conectando con Google Sheets (desde {CREDENTIALS_FILE})...")
@@ -62,28 +57,26 @@ class SheetsHandler:
                 self._abrir_o_crear_sheet()
                 return
             except Exception as e:
-                logger.error(f"❌ Error al abrir archivo de credenciales local: {e}")
+                logger.error(f"❌ Error al abrir archivo local: {e}")
 
-        # 3. Si no hay nada configurado
         logger.warning("⚠️ No se encontraron credenciales válidas.")
 
     def _abrir_o_crear_sheet(self):
         try:
             self.sheet = self.client.open(GOOGLE_SHEET_NAME)
-            logger.info(f"✅ Conectado exitosamente a Google Sheet: '{GOOGLE_SHEET_NAME}'")
+            logger.info(f"✅ Conectado a Google Sheet: '{GOOGLE_SHEET_NAME}'")
         except gspread.SpreadsheetNotFound:
             try:
-                logger.info(f"📄 No existe '{GOOGLE_SHEET_NAME}'. Creando uno nuevo...")
+                logger.info(f"📄 No existe '{GOOGLE_SHEET_NAME}'. Creando...")
                 self.sheet = self.client.create(GOOGLE_SHEET_NAME)
                 self._inicializar_estructura_hojas()
             except Exception as e:
-                logger.error(f"❌ No se pudo crear la hoja. Revisa los permisos de la API: {e}")
+                logger.error(f"❌ Error al crear hoja: {e}")
         except Exception as e:
-            logger.error(f"❌ Error al acceder a '{GOOGLE_SHEET_NAME}': {e}. ¿Compartiste la hoja con el correo de la Service Account?")
+            logger.error(f"❌ Error al acceder a la hoja: {e}")
 
     def _inicializar_estructura_hojas(self):
-        if not self.sheet:
-            return
+        if not self.sheet: return
         try:
             worksheet_config = self.sheet.get_worksheet(0)
             worksheet_config.update_title("Config_Busquedas")
@@ -103,14 +96,21 @@ class SheetsHandler:
                 "horario", "departamento", "area_categoria", 
                 "descripcion_breve", "requisitos", "beneficios"
             ])
-            logger.info("📊 Estructura de pestañas inicializada correctamente.")
         except Exception as e:
-            logger.error(f"❌ Error al estructurar pestañas: {e}")
+            logger.error(f"❌ Error estructurando pestañas: {e}")
+
+    def _cargar_cache_ids(self):
+        if not self.sheet: return
+        try:
+            hoja = self.sheet.worksheet("Ofertas_Extraidas")
+            ids = hoja.col_values(1)
+            self.ids_cacheados = set(ids[1:])
+            logger.info(f"⚡ Caché de base de datos cargada: {len(self.ids_cacheados)} ofertas.")
+        except Exception as e:
+            logger.warning(f"No se pudo cargar la caché de IDs (quizás esté vacía): {e}")
 
     def obtener_busquedas_activas(self) -> list:
-        if not self.sheet:
-            logger.warning("⚠️ Sin conexión a Sheets. Retornando búsqueda por defecto.")
-            return [{"puesto": "practicante de datos", "lugar": "lima"}]
+        if not self.sheet: return [{"puesto": "practicante de datos", "lugar": "lima"}]
         try:
             try:
                 worksheet = self.sheet.worksheet("Config_Busquedas")
@@ -133,20 +133,16 @@ class SheetsHandler:
             return [{"puesto": "practicante de datos", "lugar": "lima"}]
 
     def verificar_y_guardar(self, ofertas_del_scraper: list, nombre_scraper: str, puesto: str, lugar: str) -> dict:
-        if not ofertas_del_scraper:
-            return {'guardadas': 0, 'duplicadas': 0, 'errores': 0}
-        if not self.sheet:
-            logger.error("❌ Sin conexión a Google Sheets")
-            return {'guardadas': 0, 'duplicadas': 0, 'errores': len(ofertas_del_scraper)}
+        if not ofertas_del_scraper: return {'guardadas': 0, 'duplicadas': 0, 'errores': 0}
+        if not self.sheet: return {'guardadas': 0, 'duplicadas': 0, 'errores': len(ofertas_del_scraper)}
         
         filas_a_insertar, contador_nuevas, contador_duplicadas = [], 0, 0
         
         try:
             hoja_real = self.sheet.worksheet("Ofertas_Extraidas")
-            valores_existentes = hoja_real.col_values(1)  
             
             for payload in ofertas_del_scraper:
-                if payload["id_oferta"] in valores_existentes:
+                if payload["id_oferta"] in self.ids_cacheados:
                     contador_duplicadas += 1
                     continue
                 
@@ -158,25 +154,22 @@ class SheetsHandler:
                     payload.get("requisitos"), payload.get("beneficios")
                 ]
                 filas_a_insertar.append(fila)
+                self.ids_cacheados.add(payload["id_oferta"])
                 contador_nuevas += 1
             
             if filas_a_insertar:
                 hoja_real.append_rows(filas_a_insertar, value_input_option="RAW")
-                logger.info(f"💾 ¡Lote procesado! {contador_nuevas} filas nuevas insertadas en Google Sheets.")
+                logger.info(f"💾 Lote procesado: {contador_nuevas} filas nuevas insertadas.")
             
             self.actualizar_estado(puesto, lugar)
             return {'guardadas': contador_nuevas, 'duplicadas': contador_duplicadas, 'errores': 0}
             
-        except gspread.WorksheetNotFound:
-            self._inicializar_estructura_hojas()
-            return self.verificar_y_guardar(ofertas_del_scraper, nombre_scraper, puesto, lugar)
         except Exception as e:
             logger.error(f"❌ Error crítico guardando en Sheets: {e}")
             return {'guardadas': 0, 'duplicadas': 0, 'errores': len(ofertas_del_scraper)}
 
     def actualizar_estado(self, puesto: str, lugar: str):
-        if not self.sheet:
-            return
+        if not self.sheet: return
         try:
             worksheet = self.sheet.worksheet("Config_Busquedas")
             registros = worksheet.get_all_values()
@@ -185,4 +178,4 @@ class SheetsHandler:
                     worksheet.update_cell(i+1, 4, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                     break
         except Exception as e:
-            logger.error(f"❌ Error actualizando estado: {e}")
+            pass
