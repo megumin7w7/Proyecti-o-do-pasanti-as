@@ -17,33 +17,43 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip' # Caché de dependencias de Python
 
-      - name: 📦 Instalar dependencias de Python
+      - name: 📦 Instalar dependencias del proyecto
         run: |
           python -m pip install --upgrade pip
-          # 1. Dependencias base (las mismas de Streamlit)
           pip install -r requirements.txt
-          # 2. Dependencias EXCLUSIVAS del scraper (que no están en requirements.txt)
-          pip install spacy playwright playwright-stealth loguru python-dotenv
-          # 3. Descargar modelo de spaCy (AHORA SÍ FUNCIONARÁ porque spacy ya está instalado)
           python -m spacy download es_core_news_md
 
-      - name: 🌐 Instalar Chromium y dependencias del sistema
-        run: |
-          playwright install chromium
-          playwright install-deps chromium
+      - name: 🗂️ Obtener versión exacta de Playwright
+        id: playwright-version
+        run: echo "VERSION=$(pip show playwright | grep Version | awk '{print $2}')" >> $GITHUB_ENV
+
+      - name: 💾 Caché del navegador Chromium de Playwright
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ env.VERSION }}
+
+      - name: 🌐 Instalar navegadores Playwright (Solo si no hay caché)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: playwright install chromium
+        
+      - name: ⚙️ Instalar dependencias del sistema operativo (Requerido siempre)
+        run: playwright install-deps chromium
 
       - name: 🚀 Ejecutar el Pipeline de Scraping
         env:
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         run: python main.py
-        continue-on-error: true  # Permite que el paso de debug se ejecute aunque el scraper falle
+        continue-on-error: true
 
-      - name: 📸 Subir debug (screenshots + HTML)
-        if: always()  # Se ejecuta SIEMPRE, incluso si el paso anterior falló
+      - name: 📸 Subir logs y debug
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: bumeran-debug-artifacts
+          name: scraper-debug-artifacts
           path: |
             *.png
             *.html
