@@ -29,7 +29,7 @@ class BumeranScraper(BaseScraper):
         ofertas_recopiladas = []
         
         if not self.page:
-            self.iniciar_navegador(headless=True)
+            self.iniciar_navegador(headless=False)
             
         puesto_slug = puesto.lower().replace(" ", "-")
         pagina_actual = 1
