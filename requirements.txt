@@ -1,6 +1,10 @@
-streamlit
-pandas
-gspread
-google-auth
-requests
-playwright-stealth
+streamlit==1.31.0
+pandas==2.2.0
+gspread==6.0.0
+google-auth==2.27.0
+requests==2.31.0
+playwright==1.41.0
+playwright-stealth==1.0.6
+loguru==0.7.2
+spacy==3.7.2
+python-dotenv==1.0.1
