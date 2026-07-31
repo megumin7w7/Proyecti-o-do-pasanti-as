@@ -9,6 +9,7 @@ import hashlib
 from datetime import datetime
 from typing import Dict, Optional
 from loguru import logger
+import asyncio
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from nlp.text_cleaner import TextCleaner
@@ -137,7 +138,17 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
             logger.info(f"🌐 INICIANDO NAVEGADOR PARA: {nombre_portal}")
             logger.info(f"{'='*60}")
             
-            scraper.iniciar_navegador(headless=True)
+            # 1. Detectamos si el scraper es asíncrono (como Indeed)
+            es_asincrono = asyncio.iscoroutinefunction(scraper.iniciar_navegador)
+            loop = None
+            
+            # 2. Iniciamos el navegador según su tipo
+            if es_asincrono:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(scraper.iniciar_navegador(headless=True))
+            else:
+                scraper.iniciar_navegador(headless=True)
             
             try:
                 for busqueda in busquedas_a_ejecutar:
@@ -147,12 +158,21 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
                     logger.info(f"\n🔍 Buscando: '{puesto}' en '{lugar}' (Límite: {limite_portal})")
                     
                     try:
-                        ofertas_crudas = scraper.recolectar_ofertas(
-                            limite_ofertas=limite_portal, 
-                            puesto=puesto, 
-                            lugar=lugar, 
-                            filtro_relevancia_cb=es_titulo_relevante
-                        )
+                        # 3. Recolectamos ofertas según su tipo
+                        if es_asincrono:
+                            ofertas_crudas = loop.run_until_complete(scraper.recolectar_ofertas(
+                                limite_ofertas=limite_portal, 
+                                puesto=puesto, 
+                                lugar=lugar, 
+                                filtro_relevancia_cb=es_titulo_relevante
+                            ))
+                        else:
+                            ofertas_crudas = scraper.recolectar_ofertas(
+                                limite_ofertas=limite_portal, 
+                                puesto=puesto, 
+                                lugar=lugar, 
+                                filtro_relevancia_cb=es_titulo_relevante
+                            )
                     except Exception as e:
                         logger.error(f"❌ Fallo en {nombre_portal} para '{puesto}': {e}")
                         continue
@@ -180,7 +200,12 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
                     
             finally:
                 logger.info(f"🔒 Cerrando navegador de {nombre_portal}...")
-                scraper.cerrar_navegador()
+                # 4. Cerramos el navegador según su tipo
+                if es_asincrono:
+                    loop.run_until_complete(scraper.cerrar_navegador())
+                    loop.close()
+                else:
+                    scraper.cerrar_navegador()
                 
     except Exception as e:
         logger.critical(f"💥 Falla general: {e}")
