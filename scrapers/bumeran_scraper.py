@@ -67,9 +67,9 @@ class BumeranScraper(BaseScraper):
                     
                     try:
                         cuerpo = nueva_pag.locator("[id*='aviso-description'], [class*='aviso-description'], div[class*='Description']").first
-                        texto_crudo = cuerpo.inner_text(timeout=3000)[:3000]
+                        texto_crudo = cuerpo.inner_text(timeout=1000)[:3000]
                     except:
-                        texto_crudo = nueva_pag.inner_text("body", timeout=3000)[:3000]
+                        texto_crudo = nueva_pag.inner_text("body", timeout=1000)[:3000]
                         
                     if texto_crudo and len(texto_crudo) > 50:
                         ofertas.append({
