@@ -28,7 +28,7 @@ class ComputrabajoScraper(BaseScraper):
                           puesto: str = None, lugar: str = None, filtro_relevancia_cb=None) -> list:
         """Recolecta ofertas de Computrabajo usando paginación dinámica."""
         if not self.page:
-            self.iniciar_navegador(headless=True)
+            self.iniciar_navegador(headless=False)
             
         ofertas_recopiladas = []
         pagina_actual = 1
