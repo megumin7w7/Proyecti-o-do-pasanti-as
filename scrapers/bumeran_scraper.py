@@ -22,7 +22,6 @@ class BumeranScraper(BaseScraper):
 
     def recolectar_ofertas(self, limite_ofertas: int = 20, puesto: str = "", lugar: str = "", filtro_relevancia_cb=None) -> list:
         ofertas = []
-        # Bumeran usa el formato de guiones (ej: analista-de-datos)
         slug_puesto = normalizar_termino_busqueda(puesto)["slug_guiones"]
         
         for pagina in range(1, 10):
@@ -32,12 +31,19 @@ class BumeranScraper(BaseScraper):
             
             self.logger.info(f"📄 Bumeran -> Página {pagina}: {url}")
             
-            if not self.navegar_a(url, wait_until="commit"):
+            # 1. Esperamos a que el DOM cargue completo
+            if not self.navegar_a(url, wait_until="domcontentloaded"):
                 break
                 
             self._destruir_modales()
             
-            # Selector genérico para tarjetas de empleo en Bumeran
+            # 2. Obligamos a Playwright a esperar hasta que exista al menos una tarjeta
+            try:
+                self.page.wait_for_selector("a[href*='/empleos/']", timeout=10000)
+            except:
+                self.logger.warning(f"⚠️ No se encontraron ofertas a tiempo en Bumeran (Página {pagina})")
+                break
+            
             enlaces = self.page.locator("a[href*='/empleos/']").all()
             if not enlaces: 
                 break
@@ -53,32 +59,32 @@ class BumeranScraper(BaseScraper):
                     if not href.startswith("http"): href = f"https://www.bumeran.com.pe{href}"
                     if any(o['link_oferta'] == href for o in ofertas): continue
                     
-                    # Abrir la oferta en una pestaña optimizada
                     with self.context.expect_page() as nueva_pag_info:
                         self.page.evaluate(f"window.open('{href}', '_blank')")
                     
                     nueva_pag = nueva_pag_info.value
-                    nueva_pag.wait_for_load_state("commit")
+                    nueva_pag.wait_for_load_state("domcontentloaded", timeout=5000)
                     
                     try:
-                        # Extraer descripción específica de Bumeran
                         cuerpo = nueva_pag.locator("[id*='aviso-description'], [class*='aviso-description'], div[class*='Description']").first
-                        texto_crudo = cuerpo.inner_text()[:3000]
+                        texto_crudo = cuerpo.inner_text(timeout=3000)[:3000]
                     except:
-                        texto_crudo = nueva_pag.inner_text("body")[:3000]
+                        texto_crudo = nueva_pag.inner_text("body", timeout=3000)[:3000]
                         
                     if texto_crudo and len(texto_crudo) > 50:
                         ofertas.append({
                             "link_oferta": href, 
                             "plataforma_origen": self.plataforma,
                             "texto_crudo": texto_crudo, 
-                            # Tomar solo la primera línea si el título vino con texto extra
                             "titulo_puesto": titulo.split('\n')[0] 
                         })
                         self.logger.debug(f"✅ Extrayendo: {titulo[:40]}")
                         
-                    nueva_pag.close()
                 except Exception as e:
                     self.logger.debug(f"Error procesando oferta de Bumeran: {e}")
+                finally:
+                    # Garantiza que la pestaña siempre se cierre, incluso si falla
+                    if 'nueva_pag' in locals() and not nueva_pag.is_closed():
+                        nueva_pag.close()
                     
         return ofertas
