@@ -1,157 +1,84 @@
 """
-Módulo: scrapers/bumeran_scraper.py (Extracción de título robusta y logs visibles)
+Módulo: scrapers/bumeran_scraper.py (Optimizado)
 """
-import time
-import re
 from scrapers.base_scraper import BaseScraper
-from loguru import logger
+from utils.url_cleaner import normalizar_termino_busqueda
 
 class BumeranScraper(BaseScraper):
-    """Scraper específico para Bumeran usando Playwright"""
     def __init__(self):
         super().__init__()
         self.plataforma = "Bumeran"
-        logger.info("✅ BumeranScraper (Playwright) inicializado")
 
     def _destruir_modales(self):
+        """Elimina popups y banners que bloquean la navegación."""
         try:
             self.page.evaluate("""
-                document.querySelectorAll('[class*="banner"], [id*="cookie"], [class*="modal"]').forEach(e => e.remove());
-                document.body.style.overflow = 'auto';
+                document.querySelectorAll('[class*="modal"], [class*="Popup"], button[class*="close"], div[id*="dfp"]').forEach(e => {
+                    if (e.offsetParent !== null) e.click();
+                });
             """)
-        except Exception:
+        except:
             pass
 
-    def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
-                          puesto: str = "analista de datos", lugar: str = "lima", 
-                          filtro_relevancia_cb=None) -> list:
+    def recolectar_ofertas(self, limite_ofertas: int = 20, puesto: str = "", lugar: str = "", filtro_relevancia_cb=None) -> list:
+        ofertas = []
+        # Bumeran usa el formato de guiones (ej: analista-de-datos)
+        slug_puesto = normalizar_termino_busqueda(puesto)["slug_guiones"]
         
-        ofertas_recopiladas = []
-        
-        if not self.page:
-            self.iniciar_navegador(headless=False)
+        for pagina in range(1, 10):
+            if len(ofertas) >= limite_ofertas: break
             
-        puesto_slug = puesto.lower().replace(" ", "-")
-        pagina_actual = 1
-        
-        while len(ofertas_recopiladas) < limite_ofertas:
-            try:
-                if pagina_actual == 1:
-                    url_busqueda = f"https://www.bumeran.com.pe/empleos-busqueda-{puesto_slug}.html"
-                else:
-                    url_busqueda = f"https://www.bumeran.com.pe/empleos-busqueda-{puesto_slug}.html?page={pagina_actual}"
-                    
-                logger.info(f"🔍 Bumeran (Pág {pagina_actual}): {url_busqueda}")
-                
-                self.page.goto(url_busqueda, wait_until="domcontentloaded", timeout=30000)
-                time.sleep(2)
-                self._destruir_modales()
-                
-                if lugar and pagina_actual == 1:
-                    try:
-                        input_lugar = self.page.locator("input[aria-label='Lugar de trabajo']").first
-                        input_lugar.fill(lugar.capitalize())
-                        self.page.keyboard.press("Enter")
-                        self.page.wait_for_load_state("networkidle", timeout=10000)
-                        logger.info(f"📍 Filtro de ubicación aplicado: {lugar}")
-                    except Exception as e:
-                        logger.warning(f"⚠️ No se pudo aplicar filtro de ubicación: {e}")
-                
-                self.scroll_al_final()
-                time.sleep(1.5)
-                
-                selector_ofertas = "a[href*='-aviso-'], a[href*='/empleos/']"
-                try:
-                    self.page.wait_for_selector(selector_ofertas, timeout=8000)
-                except Exception:
-                    logger.info(f"🏁 Bumeran: Fin de paginación en página {pagina_actual}")
-                    break
-                
-                enlaces = self.obtener_elementos(selector_ofertas)
-                count = enlaces.count()
-                
-                if count == 0:
-                    logger.info(f"🏁 Bumeran: Fin de paginación en página {pagina_actual} (count == 0)")
-                    break
-                
-                logger.info(f"📦 {count} enlaces encontrados en página {pagina_actual}")
-                
-                # Procesar ofertas
-                for i in range(min(count, limite_ofertas - len(ofertas_recopiladas))):
-                    try:
-                        enlace = enlaces.nth(i)
-                        href = enlace.get_attribute("href")
-                        
-                        if not href or "busqueda" in href:
-                            continue
-                        
-                        if not href.startswith("http"):
-                            href = f"https://www.bumeran.com.pe{href}"
-                        
-                        # ✅ CORRECCIÓN CLAVE: Extraer el título ignorando metadata corta
-                        texto_tarjeta = enlace.inner_text()
-                        lineas = [l.strip() for l in texto_tarjeta.split('\n') if l.strip()]
-                        
-                        titulo = "Sin título"
-                        for linea in lineas:
-                            # Buscamos una línea larga que no sea metadata común
-                            if len(linea) > 20 and not any(x in linea.lower() for x in ["publicado", "hace", "días", "lima", "presencial", "remoto", "híbrido"]):
-                                titulo = linea
-                                break
-                        
-                        # Fallback: si no se encontró, usar la primera línea con > 15 caracteres
-                        if titulo == "Sin título":
-                            for linea in lineas:
-                                if len(linea) > 15:
-                                    titulo = linea
-                                    break
-                        
-                        if any(o['link_oferta'] == href for o in ofertas_recopiladas):
-                            continue
-                        
-                        # ✅ LOG VISIBLE: Ahora usamos WARNING para que SÍ se vea en la consola
-                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
-                            logger.warning(f"⏭️ DESCARTADO POR FILTRO: '{titulo}' (buscando: '{puesto}')")
-                            continue
-                        
-                        # Abrir oferta
-                        self.page.evaluate(f"window.open('{href}', '_blank')")
-                        self.page.wait_for_timeout(1000)
-                        
-                        self.page = self.page.context.pages[-1]
-                        time.sleep(1.5)
-                        self._destruir_modales()
-                        
-                        texto_crudo = self.obtener_texto_pagina()
-                        if texto_crudo and len(texto_crudo) > 100:
-                            ofertas_recopiladas.append({
-                                "link_oferta": href,
-                                "plataforma_origen": self.plataforma,
-                                "texto_crudo": texto_crudo[:3000],
-                                "titulo_puesto": titulo
-                            })
-                            # ✅ LOG VISIBLE: Confirmación de guardado
-                            logger.info(f"✅ [{len(ofertas_recopiladas)}] GUARDADA: {titulo[:40]}...")
-                        
-                        self.page.close()
-                        self.page = self.page.context.pages[0]
-                        
-                    except Exception as e:
-                        logger.error(f"❌ Error procesando oferta {i}: {e}")
-                        if len(self.page.context.pages) > 1:
-                            self.page.close()
-                            self.page = self.page.context.pages[0]
-                
-                if count < 15:
-                    logger.info("🏁 Página parcial detectada (< 15 ofertas), asumiendo última página real.")
-                    break
-                    
-                pagina_actual += 1
-                
-            except Exception as e:
-                logger.error(f"❌ Error crítico en página {pagina_actual}: {e}")
-                self.debug_snapshot(f"bumeran_error_p{pagina_actual}")
+            url = f"https://www.bumeran.com.pe/empleos-busqueda-{slug_puesto}.html?page={pagina}" if pagina > 1 else f"https://www.bumeran.com.pe/empleos-busqueda-{slug_puesto}.html"
+            
+            self.logger.info(f"📄 Bumeran -> Página {pagina}: {url}")
+            
+            if not self.navegar_a(url, wait_until="commit"):
                 break
-        
-        logger.info(f"✅ Total Bumeran: {len(ofertas_recopiladas)} ofertas extraídas y listas para retornar")
-        return ofertas_recopiladas
+                
+            self._destruir_modales()
+            
+            # Selector genérico para tarjetas de empleo en Bumeran
+            enlaces = self.page.locator("a[href*='/empleos/']").all()
+            if not enlaces: 
+                break
+            
+            for enlace in enlaces:
+                if len(ofertas) >= limite_ofertas: break
+                
+                try:
+                    href = enlace.get_attribute("href")
+                    titulo = enlace.inner_text().strip() or puesto
+                    
+                    if not href: continue
+                    if not href.startswith("http"): href = f"https://www.bumeran.com.pe{href}"
+                    if any(o['link_oferta'] == href for o in ofertas): continue
+                    
+                    # Abrir la oferta en una pestaña optimizada
+                    with self.context.expect_page() as nueva_pag_info:
+                        self.page.evaluate(f"window.open('{href}', '_blank')")
+                    
+                    nueva_pag = nueva_pag_info.value
+                    nueva_pag.wait_for_load_state("commit")
+                    
+                    try:
+                        # Extraer descripción específica de Bumeran
+                        cuerpo = nueva_pag.locator("[id*='aviso-description'], [class*='aviso-description'], div[class*='Description']").first
+                        texto_crudo = cuerpo.inner_text()[:3000]
+                    except:
+                        texto_crudo = nueva_pag.inner_text("body")[:3000]
+                        
+                    if texto_crudo and len(texto_crudo) > 50:
+                        ofertas.append({
+                            "link_oferta": href, 
+                            "plataforma_origen": self.plataforma,
+                            "texto_crudo": texto_crudo, 
+                            # Tomar solo la primera línea si el título vino con texto extra
+                            "titulo_puesto": titulo.split('\n')[0] 
+                        })
+                        self.logger.debug(f"✅ Extrayendo: {titulo[:40]}")
+                        
+                    nueva_pag.close()
+                except Exception as e:
+                    self.logger.debug(f"Error procesando oferta de Bumeran: {e}")
+                    
+        return ofertas
