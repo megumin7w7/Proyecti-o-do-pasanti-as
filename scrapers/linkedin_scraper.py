@@ -1,141 +1,81 @@
 """
-Módulo: scrapers/linkedin_scraper.py (Migrado a Playwright - Optimizado)
+Módulo: scrapers/linkedin_scraper.py (Optimizado)
 """
-import time
-import urllib.parse
 from scrapers.base_scraper import BaseScraper
-from loguru import logger
+from utils.url_cleaner import normalizar_termino_busqueda
 
 class LinkedInScraper(BaseScraper):
-    """Scraper específico para LinkedIn usando Playwright"""
     def __init__(self):
         super().__init__()
         self.plataforma = "LinkedIn"
-        logger.info("✅ LinkedInScraper (Playwright) inicializado")
 
-    def _destruir_modales(self):
-        """Elimina modales de login."""
-        try:
-            self.page.evaluate("""
-                document.querySelectorAll('[role="dialog"], .modal, .contextual-sign-in-modal').forEach(e => e.remove());
-                document.body.style.overflow = 'auto';
-            """)
-        except Exception:
-            pass
-
-    def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
-                          puesto: str = "practicante", lugar: str = "peru", 
-                          filtro_relevancia_cb=None) -> list:
-        """Recolecta ofertas de LinkedIn."""
-        if not self.page:
-            self.iniciar_navegador(headless=True)
+    def recolectar_ofertas(self, limite_ofertas: int = 20, puesto: str = "", lugar: str = "", filtro_relevancia_cb=None) -> list:
+        ofertas = []
+        
+        # LinkedIn usa el formato de búsqueda con signos '+' (ej: analista+de+datos)
+        q_puesto = normalizar_termino_busqueda(puesto)["slug_mas"]
+        q_lugar = normalizar_termino_busqueda(lugar)["slug_mas"]
+        
+        # Parámetro f_TPR=r2592000 filtra por los últimos 30 días para evitar resultados viejos
+        url = f"https://pe.linkedin.com/jobs/search?keywords={q_puesto}&location={q_lugar}&f_TPR=r2592000"
+        
+        self.logger.info(f"🚀 LinkedIn -> Navegando a: {url}")
+        
+        if not self.navegar_a(url, wait_until="domcontentloaded"):
+            return ofertas
+        
+        # LinkedIn deslogueado usa "infinite scroll". Hacemos un poco de scroll.
+        for _ in range(3):
+            self.scroll_al_final()
+            self.page.wait_for_timeout(1000)
             
-        ofertas_recopiladas = []
-        puesto_url = urllib.parse.quote(puesto)
-        lugar_url = urllib.parse.quote(lugar)
-        offset = 0
-        paginas_revisadas = 0
-        max_paginas = 3  # ⚡ Solo 3 páginas para ser más rápido
+        tarjetas = self.page.locator("a.base-card__full-link, a.job-search-card__title").all()
         
-        try:
-            while len(ofertas_recopiladas) < limite_ofertas and paginas_revisadas < max_paginas:
-                url_busqueda = f"https://www.linkedin.com/jobs/search/?keywords={puesto_url}&location={lugar_url}&start={offset}"
-                logger.info(f"🔍 LinkedIn (Pág {paginas_revisadas + 1}): {url_busqueda}")
+        for tarjeta in tarjetas:
+            if len(ofertas) >= limite_ofertas: break
+            
+            try:
+                href = tarjeta.get_attribute("href")
+                titulo = tarjeta.inner_text().strip()
                 
-                self.navegar_a(url_busqueda)
-                time.sleep(1.5)  # ⚡ Reducido
-                self._destruir_modales()
+                if not href: continue
                 
-                # Scroll
-                self.scroll_al_final()
-                time.sleep(1)  # ⚡ Reducido
+                # Limpiar los excesivos parámetros de rastreo que LinkedIn añade a las URLs
+                href = href.split('?')[0]
                 
-                # Buscar tarjetas
-                tarjetas = self.obtener_elementos("div.base-card, div.job-search-card, li.jobs-search-results__list-item")
-                count = tarjetas.count()
+                if any(o["link_oferta"] == href for o in ofertas): continue
                 
-                if count == 0:
-                    logger.warning("️ No hay tarjetas en esta página")
-                    break
+                # Cargar la tarjeta en pestaña nueva
+                with self.context.expect_page() as nueva_pag_info:
+                    self.page.evaluate(f"window.open('{href}', '_blank')")
                 
-                logger.info(f"📦 {count} tarjetas encontradas")
+                nueva_pag = nueva_pag_info.value
+                nueva_pag.wait_for_load_state("commit")
                 
-                # Procesar tarjetas
-                for i in range(min(count, limite_ofertas - len(ofertas_recopiladas))):
-                    try:
-                        tarjeta = tarjetas.nth(i)
-                        
-                        # Obtener enlace
-                        try:
-                            enlace = tarjeta.locator("a.base-card__full-link, a").first
-                            href = enlace.get_attribute("href")
-                            titulo = enlace.inner_text().strip()
-                        except:
-                            continue
-                        
-                        if not href or "job" not in href.lower():
-                            continue
-                        
-                        # ✅ 1. ASEGURAR URL ABSOLUTA
-                        if not href.startswith("http"):
-                            href = f"https://www.linkedin.com{href}"
-                        
-                        # Verificar duplicados
-                        if any(o['link_oferta'] == href for o in ofertas_recopiladas):
-                            continue
-                        
-                        # Filtro de relevancia
-                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
-                            continue
-                        
-                        # Abrir oferta (en LinkedIn carga al costado, es rápido)
-                        self.page.evaluate(f"window.open('{href}', '_blank')")
-                        self.page.wait_for_timeout(500)  # ⚡ Reducido
-                        
-                        # Cambiar a nueva pestaña
-                        self.page = self.page.context.pages[-1]
-                        time.sleep(1.5)  # ⚡ Reducido
-                        self._destruir_modales()
-                        
-                        # Click en "Ver más" para expandir
-                        try:
-                            btn_ver_mas = self.page.locator("button.show-more-less-html__button").first
-                            btn_ver_mas.click()
-                            time.sleep(1)  #  Reducido
-                        except:
-                            pass
-                        
-                        # ✅ 2. CAPTURAR DESCRIPCIÓN COMPLETA (hasta 4000 chars)
-                        try:
-                            cuerpo = self.page.locator("main, section.core-rail").first
-                            texto_crudo = cuerpo.inner_text()[:4000]
-                        except:
-                            texto_crudo = self.obtener_texto_pagina()[:4000]
-                        
-                        if texto_crudo and len(texto_crudo) > 100:
-                            ofertas_recopiladas.append({
-                                "link_oferta": href,  # ✅ URL ABSOLUTA
-                                "plataforma_origen": self.plataforma,
-                                "texto_crudo": texto_crudo,  # ✅ DESCRIPCIÓN COMPLETA
-                                "titulo_puesto": titulo
-                            })
-                            logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:40]}...")
-                        
-                        # Cerrar y volver
-                        self.page.close()
-                        self.page = self.page.context.pages[0]
-                        
-                    except Exception as e:
-                        logger.error(f"❌ Error en tarjeta {i}: {e}")
-                        if len(self.page.context.pages) > 1:
-                            self.page.close()
-                            self.page = self.page.context.pages[0]
+                # Cerrar modal persistente de "Inicia Sesión" si aparece
+                try:
+                    nueva_pag.evaluate("document.querySelectorAll('button.modal__dismiss, button.sign-in-modal__dismiss').forEach(b => b.click())")
+                except: 
+                    pass
                 
-                offset += 25
-                paginas_revisadas += 1
+                try:
+                    # Div exacto donde LinkedIn coloca la descripción de la oferta
+                    desc_locator = nueva_pag.locator("div.show-more-less-html__markup, div.description__text").first
+                    texto_crudo = desc_locator.inner_text()[:3000]
+                except:
+                    texto_crudo = nueva_pag.inner_text("body")[:3000]
+                    
+                if texto_crudo and len(texto_crudo) > 50:
+                    ofertas.append({
+                        "link_oferta": href, 
+                        "plataforma_origen": self.plataforma,
+                        "texto_crudo": texto_crudo, 
+                        "titulo_puesto": titulo
+                    })
+                    self.logger.info(f"📦 Extrayendo: {titulo[:40]}")
+                    
+                nueva_pag.close()
+            except Exception as e:
+                self.logger.debug(f"Error procesando tarjeta LinkedIn: {e}")
                 
-        except Exception as e:
-            logger.error(f"❌ Error crítico LinkedIn: {e}")
-        
-        logger.info(f"✅ Total LinkedIn: {len(ofertas_recopiladas)} ofertas")
-        return ofertas_recopiladas
+        return ofertas
