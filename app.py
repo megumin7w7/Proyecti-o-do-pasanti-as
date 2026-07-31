@@ -80,32 +80,35 @@ with st.sidebar.expander("📋 Búsquedas Activas", expanded=True):
             try:
                 config_sheet = sheet.worksheet("Config_Busquedas")
                 busquedas_data = config_sheet.get_all_records()
-                busquedas_df = pd.DataFrame(busquedas_data)
                 
-                if not busquedas_df.empty and 'Puesto' in busquedas_df.columns:
-                    # Filtrar solo las activas
-                    busquedas_activas = busquedas_df[busquedas_df['Activo'].astype(str).str.upper() == 'SI']
+                if busquedas_data:
+                    busquedas_df = pd.DataFrame(busquedas_data)
                     
-                    if busquedas_activas.empty:
-                        st.info("No hay búsquedas activas configuradas.")
+                    if 'Puesto' in busquedas_df.columns:
+                        # Comprobar si hay alguna búsqueda activa
+                        if not (busquedas_df['Activo'].astype(str).str.upper() == 'SI').any():
+                            st.info("No hay búsquedas activas configuradas.")
+                        else:
+                            # Iteramos sobre todo el dataframe para mantener el índice original
+                            for idx, row in busquedas_df.iterrows():
+                                if str(row.get('Activo', '')).strip().upper() == 'SI':
+                                    col_a, col_b = st.columns([4, 1])
+                                    with col_a:
+                                        st.text(f"📍 {row['Puesto']} - {row['Lugar']}")
+                                    with col_b:
+                                        # Botón para eliminar mapeado al índice único
+                                        if st.button("🗑️", key=f"del_{idx}"):
+                                            try:
+                                                # Cálculo exacto de la fila en Google Sheets: 
+                                                # idx (base 0) + 1 (por empezar en fila 1) + 1 (por el encabezado) = idx + 2
+                                                fila_sheet = idx + 2 
+                                                config_sheet.update_cell(fila_sheet, 3, "NO")
+                                                st.success("✅ Eliminada")
+                                                st.rerun()
+                                            except Exception as e:
+                                                st.error(f"Error al eliminar: {e}")
                     else:
-                        for idx, row in busquedas_activas.iterrows():
-                            col_a, col_b = st.columns([4, 1])
-                            with col_a:
-                                st.text(f"📍 {row['Puesto']} - {row['Lugar']}")
-                            with col_b:
-                                # Botón para eliminar (marcar como NO de forma segura)
-                                if st.button("🗑️", key=f"del_{idx}"):
-                                    try:
-                                        # Buscamos la celda exacta por el nombre del puesto para evitar errores de índice
-                                        cell = config_sheet.find(row['Puesto'])
-                                        if cell:
-                                            # La columna "Activo" es la 3ra (C)
-                                            config_sheet.update_cell(cell.row, 3, "NO")
-                                            st.success("✅ Eliminada")
-                                            st.rerun()
-                                    except Exception as e:
-                                        st.error(f"Error al eliminar: {e}")
+                        st.info("No hay columnas válidas configuradas aún.")
                 else:
                     st.info("No hay búsquedas configuradas aún.")
             except gspread.WorksheetNotFound:
