@@ -1,9 +1,13 @@
 """
-Módulo: main.py (Optimizado con Bucles Invertidos para velocidad)
+Módulo: main.py (Optimizado y Unificado)
+Ejecuta el pipeline completo usando los scrapers refactorizados.
 """
-import sys, os, time, hashlib, json
+import sys
+import os
+import time
+import hashlib
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import Dict, Optional
 from loguru import logger
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -13,10 +17,13 @@ from storage.sheets_handler import SheetsHandler, SheetsHandlerSimulado
 from scrapers.computrabajo_scraper import ComputrabajoScraper
 from scrapers.linkedin_scraper import LinkedInScraper
 from scrapers.bumeran_scraper import BumeranScraper
+from scrapers.indeed_scraper import IndeedScraperPlaywright
 
 def es_titulo_relevante(titulo: str, puesto_buscado: str) -> bool:
-    titulo_lower, puesto_lower = titulo.lower().strip(), puesto_buscado.lower().strip()
-    if puesto_lower in titulo_lower: return True
+    titulo_lower = titulo.lower().strip()
+    puesto_lower = puesto_buscado.lower().strip()
+    if puesto_lower in titulo_lower: 
+        return True
     return any(gen in titulo_lower for gen in ["practicante", "pasante", "trainee", "intern", "prácticas", "estudiante", "apoyo"])
 
 def validar_contenido_semantico(oferta: dict, puesto: str) -> bool:
@@ -24,17 +31,25 @@ def validar_contenido_semantico(oferta: dict, puesto: str) -> bool:
         "marketing": ["marketing", "branding", "digital", "seo", "sem", "growth", "comunicaciones", "publicidad", "social media"],
         "datos": ["data", "datos", "analytics", "analista de datos", "bi", "business intelligence", "sql", "power bi", "python", "excel", "dashboard"]
     }
-    texto, titulo = oferta.get("texto_crudo", "").lower(), oferta.get("titulo_puesto", "").lower()
+    texto = oferta.get("texto_crudo", "").lower()
+    titulo = oferta.get("titulo_puesto", "").lower()
     puesto_normalizado = puesto.lower()
+    
     palabras_clave = [puesto_normalizado]
-    if "marketing" in puesto_normalizado: palabras_clave.extend(DICCIONARIO_AREAS["marketing"])
-    elif any(x in puesto_normalizado for x in ["dato", "data", "analyst"]): palabras_clave.extend(DICCIONARIO_AREAS["datos"])
-    else: palabras_clave.extend(puesto_normalizado.split())
+    if "marketing" in puesto_normalizado: 
+        palabras_clave.extend(DICCIONARIO_AREAS["marketing"])
+    elif any(x in puesto_normalizado for x in ["dato", "data", "analyst"]): 
+        palabras_clave.extend(DICCIONARIO_AREAS["datos"])
+    else: 
+        palabras_clave.extend(puesto_normalizado.split())
+        
     return any(p in titulo for p in palabras_clave) or any(p in texto for p in palabras_clave)
+
 def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cleaner: TextCleaner, extractor: AIExtractor) -> Optional[Dict]:
     texto_crudo = oferta.get("texto_crudo", "")
     titulo_oferta = oferta.get("titulo_puesto", "No especificado")
-    if not texto_crudo or len(texto_crudo) < 50: return None
+    if not texto_crudo or len(texto_crudo) < 50: 
+        return None
     
     try:
         texto_limpio = cleaner.limpiar_texto(texto_crudo)
@@ -51,11 +66,9 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
         bens_list = [b.strip("• \n\r") for b in bens_raw.split("\n") if b.strip() and len(b.strip()) > 5]
         beneficios_comprimidos = "; ".join(bens_list[:5])
         
-        # ✅ 3. CORRECCIÓN DE EMPRESA: Priorizar la extraída del scraper si el NLP falla o devuelve el título
         empresa_nlp = datos_extraidos.get("empresa", "No especificada")
         empresa_scraper = oferta.get("empresa_extraida", "")
         
-        # Si el NLP devuelve "No especificada" o el mismo título, usamos la del scraper
         if empresa_nlp in ["No especificada", titulo_oferta, ""] and empresa_scraper and len(empresa_scraper) > 3:
             empresa_final = empresa_scraper
         else:
@@ -65,15 +78,15 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
             "id_oferta": f"{nombre_plataforma[:3].upper()}-{id_unico}",
             "fecha_scraping": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             "plataforma_origen": nombre_plataforma,
-            "link_oferta": oferta.get("link_oferta", ""), # Ya viene absoluta del scraper
+            "link_oferta": oferta.get("link_oferta", ""),
             "titulo_puesto": titulo_oferta if titulo_oferta else datos_extraidos.get("titulo_puesto", "No especificado"),
-            "empresa": empresa_final, # ✅ EMPRESA CORREGIDA
+            "empresa": empresa_final,
             "modalidad": datos_extraidos.get("modalidad", "Presencial"),
             "disponible_hasta": "-",
             "horario": datos_extraidos.get("horario", "Tiempo Completo"),
             "departamento": lugar.capitalize(),
             "area_categoria": categoria_hoja,
-            "descripcion_breve": texto_limpio[:2000], # ✅ ASEGURAR 2000 CARACTERES DEL TEXTO LIMPIO
+            "descripcion_breve": texto_limpio[:2000],
             "requisitos": requisitos_comprimidos if requisitos_comprimidos else "No especificados",
             "beneficios": beneficios_comprimidos if beneficios_comprimidos else "No especificados"
         }
@@ -81,19 +94,16 @@ def procesar_oferta_con_nlp(oferta: dict, nombre_plataforma: str, lugar: str, cl
         logger.error(f"❌ Error NLP: {e}")
         return None
 
-def ejecutar_pipeline(limites_por_portal: dict = None,
-                     usar_bumeran: bool = True, usar_computrabajo: bool = True, 
-                     usar_linkedin: bool = True, usar_indeed: bool = False,  
-                     usar_nlp: bool = True) -> Dict:
-    
+def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True, usar_computrabajo: bool = True, usar_linkedin: bool = True, usar_indeed: bool = True, usar_nlp: bool = True) -> Dict:
     logger.info("=" * 60 + "\n🏁 INICIANDO PIPELINE DE AUTOMATIZACIÓN - LABORAL AI\n" + "=" * 60)
     start_time = time.time()
     cleaner, extractor = TextCleaner(), AIExtractor()
     
-    try: storage = SheetsHandler()
-    except: storage = SheetsHandlerSimulado()
+    try: 
+        storage = SheetsHandler()
+    except Exception: 
+        storage = SheetsHandlerSimulado()
     
-    # 1. OBTENER TODAS LAS BÚSQUEDAS
     busquedas_a_ejecutar = storage.obtener_busquedas_activas()
     if not busquedas_a_ejecutar:
         return {'success': False, 'error': 'No hay búsquedas activas en Config_Busquedas', 'total_ofertas': 0}
@@ -103,23 +113,21 @@ def ejecutar_pipeline(limites_por_portal: dict = None,
         logger.info(f"   {i}. {b['puesto']} en {b['lugar']}")
     
     if limites_por_portal is None:
-        limites_por_portal = {"Computrabajo": 20, "Bumeran": 20, "LinkedIn": 20}
+        limites_por_portal = {"Computrabajo": 20, "Bumeran": 20, "LinkedIn": 20, "Indeed": 20}
     
     total_ofertas_guardadas = 0
     resultados_por_scraper = {}
-    todos_los_payloads = []
     
-    # 2. CONFIGURAR PORTALES
     portales = []
     if usar_computrabajo: portales.append({'scraper': ComputrabajoScraper(), 'nombre': 'Computrabajo'})
     if usar_bumeran: portales.append({'scraper': BumeranScraper(), 'nombre': 'Bumeran'})
     if usar_linkedin: portales.append({'scraper': LinkedInScraper(), 'nombre': 'LinkedIn'})
+    if usar_indeed: portales.append({'scraper': IndeedScraperPlaywright(), 'nombre': 'Indeed'})
     
     if not portales:
         return {'success': False, 'error': 'No hay portales activados', 'total_ofertas': 0}
 
     try:
-        # 🚀 ESTRATEGIA CLAVE: BUCLE EXTERNO POR PORTAL, INTERNO POR BÚSQUEDA
         for portal in portales:
             scraper = portal['scraper']
             nombre_portal = portal['nombre']
@@ -129,7 +137,6 @@ def ejecutar_pipeline(limites_por_portal: dict = None,
             logger.info(f"🌐 INICIANDO NAVEGADOR PARA: {nombre_portal}")
             logger.info(f"{'='*60}")
             
-            # ABRIR NAVEGADOR UNA SOLA VEZ POR PORTAL
             scraper.iniciar_navegador(headless=True)
             
             try:
@@ -139,10 +146,8 @@ def ejecutar_pipeline(limites_por_portal: dict = None,
                     
                     logger.info(f"\n🔍 Buscando: '{puesto}' en '{lugar}' (Límite: {limite_portal})")
                     
-                    # Ejecutar scraping (el scraper usa self.page que ya está abierto)
                     try:
                         ofertas_crudas = scraper.recolectar_ofertas(
-                            url_semilla="", 
                             limite_ofertas=limite_portal, 
                             puesto=puesto, 
                             lugar=lugar, 
@@ -159,41 +164,33 @@ def ejecutar_pipeline(limites_por_portal: dict = None,
                     ofertas_validadas = [ofr for ofr in ofertas_crudas if validar_contenido_semantico(ofr, puesto)]
                     logger.info(f"✅ Ofertas purificadas: {len(ofertas_validadas)} de {len(ofertas_crudas)}")
                     
-                    # Procesar y guardar
                     payloads = []
                     for oferta in ofertas_validadas:
                         oferta['puesto_buscado'] = puesto
                         if usar_nlp:
                             payload = procesar_oferta_con_nlp(oferta, nombre_portal, lugar, cleaner, extractor)
-                            if payload: payloads.append(payload)
-                        else:
-                            payloads.append({"id_oferta": f"{nombre_portal[:3].upper()}-x", "fecha_scraping": datetime.now().strftime('%Y-%m-%d %H:%M:%S'), "plataforma_origen": nombre_portal, "link_oferta": oferta.get("link_oferta", ""), "titulo_puesto": oferta.get("titulo_puesto", ""), "empresa": "N/A", "modalidad": "N/A", "disponible_hasta": "-", "horario": "N/A", "departamento": lugar.capitalize(), "area_categoria": "General", "descripcion_breve": oferta.get("texto_crudo", "")[:2000], "requisitos": "N/A", "beneficios": "N/A"})
+                            if payload: 
+                                payloads.append(payload)
                     
                     stats = storage.verificar_y_guardar(ofertas_del_scraper=payloads, nombre_scraper=nombre_portal, puesto=puesto, lugar=lugar)
                     
                     key_res = f"{nombre_portal}_{puesto.replace(' ', '_')}_{lugar}"
                     resultados_por_scraper[key_res] = {'extraidas': len(ofertas_validadas), 'guardadas': stats.get('guardadas', 0)}
-                    
                     total_ofertas_guardadas += stats.get('guardadas', 0)
-                    todos_los_payloads.extend(payloads)
-                    logger.info(f"💾 {nombre_portal}: {stats.get('guardadas', 0)} nuevas guardadas para '{puesto}'")
                     
             finally:
-                # CERRAR NAVEGADOR AL TERMINAR TODAS LAS BÚSQUEDAS DE ESTE PORTAL
                 logger.info(f"🔒 Cerrando navegador de {nombre_portal}...")
                 scraper.cerrar_navegador()
                 
     except Exception as e:
         logger.critical(f"💥 Falla general: {e}")
-        import traceback
-        traceback.print_exc()
         return {'success': False, 'error': str(e), 'total_ofertas': total_ofertas_guardadas}
         
     logger.info(f"\n{'='*60}")
     logger.info(f"📊 RESUMEN FINAL: {total_ofertas_guardadas} ofertas guardadas | ⏱️ Tiempo: {time.time() - start_time:.2f}s")
     logger.info(f"{'='*60}")
     
-    return {'success': True, 'total_ofertas': total_ofertas_guardadas, 'resultados_por_scraper': resultados_por_scraper, 'tiempo_ejecucion': time.time() - start_time, 'payloads': todos_los_payloads}
+    return {'success': True, 'total_ofertas': total_ofertas_guardadas}
 
 if __name__ == "__main__":
     logger.remove()
@@ -202,7 +199,8 @@ if __name__ == "__main__":
     limites_dinamicos = {
         "Computrabajo": 20,
         "Bumeran": 20,
-        "LinkedIn": 15  # Reducido para ahorrar tiempo
+        "LinkedIn": 20,
+        "Indeed": 20
     }
     
     resultados = ejecutar_pipeline(
@@ -210,9 +208,11 @@ if __name__ == "__main__":
         usar_bumeran=True, 
         usar_computrabajo=True, 
         usar_linkedin=True,
-        usar_indeed=False, 
+        usar_indeed=True, 
         usar_nlp=True
     )
     
-    if resultados['success']: print(f"\n✅ Pipeline completado: {resultados['total_ofertas']} ofertas guardadas")
-    else: print(f"\n❌ Error: {resultados.get('error')}")
+    if resultados['success']: 
+        print(f"\n✅ Pipeline completado: {resultados['total_ofertas']} ofertas guardadas")
+    else: 
+        print(f"\n❌ Error: {resultados.get('error')}")
