@@ -80,3 +80,5 @@ class LinkedInScraper(BaseScraper):
                     
             except Exception as e:
                 self.logger.debug(f"Error crítico en tarjeta LinkedIn: {e}")
+                
+        return ofertas
