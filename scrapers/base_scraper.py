@@ -5,6 +5,8 @@ import time
 from playwright.sync_api import sync_playwright, Page, Browser, BrowserContext
 from playwright_stealth import stealth_sync
 from loguru import logger
+from playwright.sync_api import Error as PlaywrightError
+
 
 class BaseScraper:
     """Clase base de alto rendimiento para scrapers de Playwright."""
@@ -45,13 +47,20 @@ class BaseScraper:
         
         # 2. BLOQUEO DE RECURSOS PESADOS (Súper Aceleración)
         def interceptar_rutas(route):
-            request = route.request
-            resource_type = request.resource_type
-            # Si es imagen, fuente, media o analytics, lo abortamos para ahorrar ancho de banda
-            if resource_type in ["image", "media", "font"] or "analytics" in request.url or "doubleclick" in request.url:
-                route.abort()
-            else:
-                route.continue_()
+            try:
+                request = route.request
+                resource_type = request.resource_type
+                # Si es imagen, fuente, media o analytics, lo abortamos para ahorrar ancho de banda
+                if resource_type in ["image", "media", "font"] or "analytics" in request.url or "doubleclick" in request.url:
+                    route.abort()
+                else:
+                    route.continue_()
+            except PlaywrightError as e:
+                # Ignoramos el error si la solicitud ya no es válida (ej. la página se cerró rápido)
+                if "Invalid InterceptionId" in str(e) or "Target closed" in str(e):
+                    pass
+                else:
+                    raise e
                 
         self.page.route("**/*", interceptar_rutas)
         
