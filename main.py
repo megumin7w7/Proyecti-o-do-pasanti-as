@@ -158,17 +158,20 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
                     logger.info(f"\n🔍 Buscando: '{puesto}' en '{lugar}' (Límite: {limite_portal})")
                     
                     try:
+                        # 💡 CAMBIO AQUÍ: Pedimos el doble al scraper (limite_extraccion)
+                        limite_extraccion = limite_portal * 2 
+                        
                         # 3. Recolectamos ofertas según su tipo
                         if es_asincrono:
                             ofertas_crudas = loop.run_until_complete(scraper.recolectar_ofertas(
-                                limite_ofertas=limite_portal, 
+                                limite_ofertas=limite_extraccion, 
                                 puesto=puesto, 
                                 lugar=lugar, 
                                 filtro_relevancia_cb=es_titulo_relevante
                             ))
                         else:
                             ofertas_crudas = scraper.recolectar_ofertas(
-                                limite_ofertas=limite_portal, 
+                                limite_ofertas=limite_extraccion, 
                                 puesto=puesto, 
                                 lugar=lugar, 
                                 filtro_relevancia_cb=es_titulo_relevante
@@ -181,8 +184,11 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
                         logger.warning(f"⚠️ 0 ofertas extraídas de {nombre_portal} para '{puesto}'")
                         continue
                     
+                    # 💡 CAMBIO AQUÍ: Filtramos y luego cortamos a la cantidad original
                     ofertas_validadas = [ofr for ofr in ofertas_crudas if validar_contenido_semantico(ofr, puesto)]
-                    logger.info(f"✅ Ofertas purificadas: {len(ofertas_validadas)} de {len(ofertas_crudas)}")
+                    ofertas_validadas = ofertas_validadas[:limite_portal] # Recorta exactamente a 20 (o el límite que sea)
+                    
+                    logger.info(f"✅ Ofertas purificadas: {len(ofertas_validadas)} (recortado al límite de {limite_portal})")
                     
                     payloads = []
                     for oferta in ofertas_validadas:
