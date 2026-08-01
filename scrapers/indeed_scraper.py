@@ -8,7 +8,7 @@ import urllib.parse
 from typing import List, Optional, Callable
 from loguru import logger
 from playwright.async_api import async_playwright, Page, Browser, BrowserContext
-
+from playwright_stealth import stealth_async
 class IndeedScraperPlaywright:
     """Scraper de Indeed Perú usando Playwright + stealth"""
     def __init__(self):
@@ -19,12 +19,12 @@ class IndeedScraperPlaywright:
         logger.info("✅ IndeedScraperPlaywright inicializado")
 
     async def iniciar_navegador(self, headless: bool = True):
-        """Lanza Chromium usando Playwright."""
+        """Lanza Chromium usando Playwright con Stealth Asíncrono."""
         logger.info("🚀 Iniciando Chromium con Playwright...")
         playwright = await async_playwright().start()
         
         self.browser = await playwright.chromium.launch(
-            headless=headless,
+            headless=headless, # Si sigue fallando, cambia a headless=False temporalmente
             args=[
                 '--disable-blink-features=AutomationControlled',
                 '--no-sandbox',
@@ -35,17 +35,16 @@ class IndeedScraperPlaywright:
         
         self.context = await self.browser.new_context(
             viewport={'width': 1920, 'height': 1080},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             locale='es-PE'
         )
         
-        await self.context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-            window.chrome = { runtime: {} };
-        """)
-        
         self.page = await self.context.new_page()
-        logger.success("✅ Navegador Playwright listo")
+        
+        # 💡 INYECCIÓN CRÍTICA DE STEALTH ASÍNCRONO
+        await stealth_async(self.page)
+        
+        logger.success("✅ Navegador Playwright listo con Evasión Anti-Bot")
 
     async def _pausa_humana(self, min_seg: float = 1.5, max_seg: float = 3.5):
         await asyncio.sleep(random.uniform(min_seg, max_seg))
