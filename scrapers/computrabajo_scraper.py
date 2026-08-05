@@ -25,10 +25,13 @@ class ComputrabajoScraper(BaseScraper):
             pass
 
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
-                          puesto: str = None, lugar: str = None, filtro_relevancia_cb=None) -> list:
+                          puesto: str = None, lugar: str = None, filtro_relevancia_cb=None,
+                          urls_existentes: set = None) -> list:
         """Pipeline dividido: 1. Descubrimiento de URLs -> 2. Extracción secuencial."""
         if not self.page:
             self.iniciar_navegador(headless=False)
+            
+        if urls_existentes is None: urls_existentes = set()
             
         ofertas_recopiladas = []
         enlaces_pendientes = []
@@ -60,13 +63,10 @@ class ComputrabajoScraper(BaseScraper):
                 count = ofertas_locator.count()
                 
                 if count == 0:
-                    self.logger.warning(f"🏁 No hay más ofertas en página {pagina_actual}")
                     break
                 
                 for i in range(count):
-                    if len(enlaces_pendientes) >= limite_ofertas: 
-                        break
-                    
+                    if len(enlaces_pendientes) >= limite_ofertas: break
                     try:
                         elem = ofertas_locator.nth(i)
                         href = elem.get_attribute("href")
@@ -75,12 +75,20 @@ class ComputrabajoScraper(BaseScraper):
                         if not href or not titulo: continue
                         if not href.startswith("http"): href = f"https://pe.computrabajo.com{href}"
                         
-                        # Filtrado temprano y control de duplicados
+                        # === FILTRO DE MEMORIA COMPARTIDA ===
+                        if href in urls_existentes: continue
+                        
                         if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto): continue
                         if not any(e["link"] == href for e in enlaces_pendientes):
                             enlaces_pendientes.append({"link": href, "titulo": titulo})
+                            urls_existentes.add(href) # Agregamos al Set global
                     except Exception as e:
-                        self.logger.debug(f"Error evaluando nodo de enlace: {e}")
+                        continue
+                        
+                pagina_actual += 1
+                
+        except Exception as e:
+            self.logger.error(f"❌ Error en fase de descubrimiento: {e}")
                         continue
                         
                 pagina_actual += 1
