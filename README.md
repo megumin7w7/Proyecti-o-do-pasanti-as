@@ -109,4 +109,3 @@ git --version
 ```bash
 git clone https://github.com/[tu-usuario]/PROYECTIÑO_DO_PASANTIÑAS.git
 cd PROYECTIÑO_DO_PASANTIÑAS
-# Laboral AI Scraper - Fase 1
