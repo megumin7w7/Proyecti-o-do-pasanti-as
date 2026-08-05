@@ -26,11 +26,12 @@ class ComputrabajoScraper(BaseScraper):
 
     def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
                           puesto: str = None, lugar: str = None, filtro_relevancia_cb=None) -> list:
-        """Recolecta ofertas de Computrabajo usando paginación dinámica."""
+        """Pipeline dividido: 1. Descubrimiento de URLs -> 2. Extracción secuencial."""
         if not self.page:
             self.iniciar_navegador(headless=False)
             
         ofertas_recopiladas = []
+        enlaces_pendientes = []
         pagina_actual = 1
         MAX_PAGINAS = 30
         
@@ -43,11 +44,14 @@ class ComputrabajoScraper(BaseScraper):
             url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}"
         else:
             url_base = url_semilla.rstrip('/')
-        
+            
+        # ==========================================
+        # FASE 1: DESCUBRIMIENTO DE ENLACES
+        # ==========================================
         try:
-            while pagina_actual <= MAX_PAGINAS and len(ofertas_recopiladas) < limite_ofertas:
+            while pagina_actual <= MAX_PAGINAS and len(enlaces_pendientes) < limite_ofertas:
                 url_pagina = f"{url_base}?p={pagina_actual}"
-                logger.info(f"📄 Página {pagina_actual}: {url_pagina}")
+                self.logger.info(f"📄 Explorando Página {pagina_actual}: {url_pagina}")
                 self.navegar_a(url_pagina)
                 time.sleep(2)
                 self._eliminar_obstaculos()
@@ -56,69 +60,65 @@ class ComputrabajoScraper(BaseScraper):
                 count = ofertas_locator.count()
                 
                 if count == 0:
-                    logger.warning(f"🏁 No hay más ofertas en página {pagina_actual}")
+                    self.logger.warning(f"🏁 No hay más ofertas en página {pagina_actual}")
                     break
                 
-                logger.info(f"📦 {count} ofertas encontradas en página {pagina_actual}")
-                
-                for i in range(min(count, limite_ofertas - len(ofertas_recopiladas))):
+                for i in range(count):
+                    if len(enlaces_pendientes) >= limite_ofertas: 
+                        break
+                    
                     try:
-                        oferta_elem = ofertas_locator.nth(i)
-                        href = oferta_elem.get_attribute("href")
-                        titulo = oferta_elem.inner_text().strip()
+                        elem = ofertas_locator.nth(i)
+                        href = elem.get_attribute("href")
+                        titulo = elem.inner_text().strip()
                         
-                        if not href or not titulo:
-                            continue
+                        if not href or not titulo: continue
+                        if not href.startswith("http"): href = f"https://pe.computrabajo.com{href}"
                         
-                        if not href.startswith("http"):
-                            href = f"https://pe.computrabajo.com{href}"
-                        
-                        if any(o['link_oferta'] == href for o in ofertas_recopiladas):
-                            continue
-                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
-                            continue
-                        
-                        # Manejo de pestañas optimizado (sin time.sleep)
-                        with self.page.context.expect_page() as nueva_pag_info:
-                            self.page.evaluate(f"window.open('{href}', '_blank')")
-                        
-                        nueva_pag = nueva_pag_info.value
-                        
-                        try:
-                            # Espera dinámica: avanza en cuanto el DOM esté listo
-                            nueva_pag.wait_for_load_state("domcontentloaded", timeout=4000)
-                            
-                            try:
-                                cuerpo = nueva_pag.locator("main, section.job-description, div.offer_requirements, .job-description").first
-                                texto_crudo = cuerpo.inner_text(timeout=3000)[:4000]
-                            except:
-                                texto_crudo = nueva_pag.inner_text("body", timeout=3000)[:4000]
-                            
-                            if texto_crudo and len(texto_crudo) > 50:
-                                ofertas_recopiladas.append({
-                                    "link_oferta": href,
-                                    "plataforma_origen": self.plataforma,
-                                    "texto_crudo": texto_crudo,
-                                    "titulo_puesto": titulo
-                                })
-                                logger.debug(f"✅ [{len(ofertas_recopiladas)}] {titulo[:40]}...")
-                                
-                        except Exception as e:
-                            logger.error(f"❌ Error interno extrayendo {titulo[:20]}: {e}")
-                        finally:
-                            # Cierre limpio e inmediato de la pestaña
-                            nueva_pag.close()
-                            
+                        # Filtrado temprano y control de duplicados
+                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto): continue
+                        if not any(e["link"] == href for e in enlaces_pendientes):
+                            enlaces_pendientes.append({"link": href, "titulo": titulo})
                     except Exception as e:
-                        logger.error(f"❌ Error procesando tarjeta {i}: {e}")
-                        if len(self.page.context.pages) > 1:
-                            self.page.close()
-                            self.page = self.page.context.pages[0]
-                            
+                        self.logger.debug(f"Error evaluando nodo de enlace: {e}")
+                        continue
+                        
                 pagina_actual += 1
                 
         except Exception as e:
-            logger.error(f"❌ Error crítico en scraping: {e}")
-        
-        logger.info(f"✅ Total extraído: {len(ofertas_recopiladas)} ofertas")
+            self.logger.error(f"❌ Error en fase de descubrimiento: {e}")
+
+        self.logger.info(f"🔗 {len(enlaces_pendientes)} enlaces listos. Iniciando extracción secuencial...")
+
+        # ==========================================
+        # FASE 2: EXTRACCIÓN DE CONTENIDO (Misma pestaña)
+        # ==========================================
+        for item in enlaces_pendientes:
+            href = item["link"]
+            titulo = item["titulo"]
+            
+            try:
+                # Reutilizamos la pestaña actual, evitando OOM de Chromium
+                self.navegar_a(href, wait_until="domcontentloaded", timeout=15000)
+                self.page.wait_for_timeout(1000)
+                
+                try:
+                    cuerpo = self.page.locator("main, section.job-description, div.offer_requirements, .job-description").first
+                    texto_crudo = cuerpo.inner_text(timeout=3000)[:4000]
+                except:
+                    texto_crudo = self.page.inner_text("body", timeout=3000)[:4000]
+                
+                if texto_crudo and len(texto_crudo) > 50:
+                    ofertas_recopiladas.append({
+                        "link_oferta": href,
+                        "plataforma_origen": self.plataforma,
+                        "texto_crudo": texto_crudo,
+                        "titulo_puesto": titulo
+                    })
+                    self.logger.debug(f"✅ Extrayendo: {titulo[:40]}...")
+                    
+            except Exception as e:
+                self.logger.error(f"❌ Timeout o error extrayendo {titulo[:20]}: {e}")
+                
+        self.logger.info(f"✅ Total extraído Computrabajo: {len(ofertas_recopiladas)} ofertas")
         return ofertas_recopiladas
