@@ -170,8 +170,15 @@ def cargar_datos(limite_filas=2000):
         fila_inicio = max(2, total_filas - limite_filas + 1)
         
         # Obtener encabezados de la fila 1 y los datos del rango calculado
+        # Obtener encabezados de la fila 1
         headers = worksheet.row_values(1)
-        rango_datos = f"A{fila_inicio}:N{total_filas}" 
+        
+        # Calcular dinámicamente la letra de la última columna
+        # chr(65) es 'A'. Si hay 15 headers, chr(64 + 15) = 'O'
+        letra_final = chr(64 + len(headers))
+        
+        # Armar el rango con la letra calculada (Ej: A2:O150)
+        rango_datos = f"A{fila_inicio}:{letra_final}{total_filas}" 
         data = worksheet.get(rango_datos)
         
         return pd.DataFrame(data, columns=headers)
