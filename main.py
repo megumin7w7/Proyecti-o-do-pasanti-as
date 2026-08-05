@@ -128,6 +128,10 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
     if not portales:
         return {'success': False, 'error': 'No hay portales activados', 'total_ofertas': 0}
 
+    # === NUEVA LÓGICA: MEMORIA COMPARTIDA ===
+    # Creamos el Set de URLs históricas una sola vez al inicio
+    urls_globales = storage.obtener_urls_cacheadas()
+    
     try:
         for portal in portales:
             scraper = portal['scraper']
@@ -138,11 +142,9 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
             logger.info(f"🌐 INICIANDO NAVEGADOR PARA: {nombre_portal}")
             logger.info(f"{'='*60}")
             
-            # 1. Detectamos si el scraper es asíncrono (como Indeed)
             es_asincrono = asyncio.iscoroutinefunction(scraper.iniciar_navegador)
             loop = None
             
-            # 2. Iniciamos el navegador según su tipo
             if es_asincrono:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
@@ -158,23 +160,24 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
                     logger.info(f"\n🔍 Buscando: '{puesto}' en '{lugar}' (Límite: {limite_portal})")
                     
                     try:
-                        # 💡 CAMBIO AQUÍ: Pedimos el doble al scraper (limite_extraccion)
                         limite_extraccion = limite_portal * 2 
                         
-                        # 3. Recolectamos ofertas según su tipo
+                        # INYECCIÓN DEL SET (urls_existentes=urls_globales)
                         if es_asincrono:
                             ofertas_crudas = loop.run_until_complete(scraper.recolectar_ofertas(
                                 limite_ofertas=limite_extraccion, 
                                 puesto=puesto, 
                                 lugar=lugar, 
-                                filtro_relevancia_cb=es_titulo_relevante
+                                filtro_relevancia_cb=es_titulo_relevante,
+                                urls_existentes=urls_globales 
                             ))
                         else:
                             ofertas_crudas = scraper.recolectar_ofertas(
                                 limite_ofertas=limite_extraccion, 
                                 puesto=puesto, 
                                 lugar=lugar, 
-                                filtro_relevancia_cb=es_titulo_relevante
+                                filtro_relevancia_cb=es_titulo_relevante,
+                                urls_existentes=urls_globales
                             )
                     except Exception as e:
                         logger.error(f"❌ Fallo en {nombre_portal} para '{puesto}': {e}")
