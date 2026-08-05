@@ -107,20 +107,25 @@ class ComputrabajoScraper(BaseScraper):
         # ==========================================
         # FASE 2: EXTRACCIÓN DE CONTENIDO (Misma pestaña)
         # ==========================================
+        # ==========================================
+        # FASE 2: EXTRACCIÓN DE CONTENIDO (Ultra-rápida)
+        # ==========================================
         for item in enlaces_pendientes:
             href = item["link"]
             titulo = item["titulo"]
             
             try:
-                # Reutilizamos la pestaña actual, evitando OOM de Chromium
-                self.navegar_a(href, wait_until="domcontentloaded", timeout=15000)
-                self.page.wait_for_timeout(1000)
+                # 🚀 OPTIMIZACIÓN 1: "commit" corta la espera apenas llega el esqueleto de la página.
+                self.navegar_a(href, wait_until="commit", timeout=10000)
                 
+                # 🚀 OPTIMIZACIÓN 2: Eliminamos el sleep de 1000ms. 
+                # Playwright es inteligente y usará este inner_text para esperar solo lo estrictamente necesario.
                 try:
                     cuerpo = self.page.locator("main, section.job-description, div.offer_requirements, .job-description").first
-                    texto_crudo = cuerpo.inner_text(timeout=3000)[:4000]
+                    texto_crudo = cuerpo.inner_text(timeout=2500)[:4000]
                 except:
-                    texto_crudo = self.page.inner_text("body", timeout=3000)[:4000]
+                    # Plan B rápido si no encuentra los selectores principales
+                    texto_crudo = self.page.inner_text("body", timeout=2500)[:4000]
                 
                 if texto_crudo and len(texto_crudo) > 50:
                     ofertas_recopiladas.append({
@@ -132,7 +137,7 @@ class ComputrabajoScraper(BaseScraper):
                     self.logger.debug(f"✅ Extrayendo: {titulo[:40]}...")
                     
             except Exception as e:
-                self.logger.error(f"❌ Timeout o error extrayendo {titulo[:20]}: {e}")
+                self.logger.error(f"❌ Error extrayendo {titulo[:20]}: {e}")
                 
         self.logger.info(f"✅ Total extraído Computrabajo: {len(ofertas_recopiladas)} ofertas")
         return ofertas_recopiladas
