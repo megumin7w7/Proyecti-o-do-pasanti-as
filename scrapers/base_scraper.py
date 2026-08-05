@@ -1,32 +1,27 @@
 """
-Módulo: scrapers/base_scraper.py
-Base robusta con reintentos, estado de salud y cierre seguro.
+Módulo: scrapers/base_scraper.py (Optimizado para CI/CD + Stealth + Aceleración de Red)
 """
 import time
-from typing import Optional
 from playwright.sync_api import sync_playwright, Page, Browser, BrowserContext
 from playwright_stealth import stealth_sync
-from playwright.sync_api import Error as PlaywrightError
 from loguru import logger
-
-from config.settings import USER_AGENT, MAX_RETRIES
+from playwright.sync_api import Error as PlaywrightError
 
 
 class BaseScraper:
+    """Clase base de alto rendimiento para scrapers de Playwright."""
     def __init__(self):
         self.playwright = None
-        self.browser: Optional[Browser] = None
-        self.context: Optional[BrowserContext] = None
-        self.page: Optional[Page] = None
-        self._inicializado = False
+        self.browser: Browser = None
+        self.context: BrowserContext = None
+        self.page: Page = None
+        self.logger = logger
 
-    def iniciar_navegador(self, headless: bool = True) -> Page:
-        if self._inicializado:
-            return self.page
-
-        logger.info("🌐 Inicializando Chromium (Stealth + Resource Blocker)...")
+    def iniciar_navegador(self, headless: bool = True):
+        """Inicializa Chromium con evasión de anti-bots y aceleración de red."""
+        self.logger.info("🌐 Inicializando Chromium (Stealth + Resource Blocker)...")
         self.playwright = sync_playwright().start()
-
+        
         self.browser = self.playwright.chromium.launch(
             headless=headless,
             args=[
@@ -34,60 +29,67 @@ class BaseScraper:
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
                 "--disable-blink-features=AutomationControlled",
-                "--disable-web-security",
-                "--disable-features=IsolateOrigins,site-per-process"
+                "--disable-web-security"
             ]
         )
-
+        
         self.context = self.browser.new_context(
             viewport={"width": 1920, "height": 1080},
-            user_agent=USER_AGENT,
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             locale="es-PE",
-            timezone_id="America/Lima",
-            java_script_enabled=True
+            timezone_id="America/Lima"
         )
-
+        
         self.page = self.context.new_page()
+        
+        # 1. APLICAR STEALTH
         stealth_sync(self.page)
-
-        def _interceptar(route):
+        
+        # 2. BLOQUEO DE RECURSOS PESADOS (Súper Aceleración)
+        def interceptar_rutas(route):
             try:
-                rt = route.request.resource_type
-                if rt in {"image", "media", "font"} or any(x in route.request.url for x in ["analytics", "doubleclick", "googletagmanager", "facebook"]):
+                request = route.request
+                resource_type = request.resource_type
+                # Si es imagen, fuente, media o analytics, lo abortamos para ahorrar ancho de banda
+                if resource_type in ["image", "media", "font"] or "analytics" in request.url or "doubleclick" in request.url:
                     route.abort()
                 else:
                     route.continue_()
-            except PlaywrightError:
-                pass
-
-        self.page.route("**/*", _interceptar)
-
+            except PlaywrightError as e:
+                # Ignoramos el error si la solicitud ya no es válida (ej. la página se cerró rápido)
+                if "Invalid InterceptionId" in str(e) or "Target closed" in str(e):
+                    pass
+                else:
+                    raise e
+                
+        self.page.route("**/*", interceptar_rutas)
+        
+        # 3. MASKING ADICIONAL
         self.page.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
             window.chrome = { runtime: {} };
-            Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
         """)
-
-        self._inicializado = True
-        logger.info("✅ Navegador base iniciado")
+        
+        self.logger.info("✅ Navegador base iniciado y optimizado")
         return self.page
 
-    def navegar_a(self, url: str, wait_until: str = "domcontentloaded", timeout: int = 40000) -> bool:
-        for intento in range(MAX_RETRIES):
+    def navegar_a(self, url: str, wait_until: str = "commit", timeout: int = 40000) -> bool:
+        """Navega a una URL evitando bloqueos por timeout de red."""
+        try:
+            self.logger.debug(f"🔗 Navegando a: {url[:80]}...")
+            self.page.goto(url, wait_until=wait_until, timeout=timeout)
+            self.page.wait_for_timeout(800)  # Pausa no bloqueante recomendada por Playwright
+            return True
+        except Exception as e:
+            self.logger.warning(f"⚠️ Alerta de navegación en {url[:50]}: {e}")
             try:
-                self.page.goto(url, wait_until=wait_until, timeout=timeout)
-                self.page.wait_for_timeout(600)
+                self.page.reload(wait_until="commit", timeout=20000)
                 return True
-            except Exception as e:
-                logger.warning(f"⚠️ Navegación fallida ({intento + 1}/{MAX_RETRIES}): {e}")
-                if intento < MAX_RETRIES - 1:
-                    time.sleep(2 ** intento)
-                    try:
-                        self.page.reload(wait_until=wait_until, timeout=timeout)
-                        return True
-                    except Exception:
-                        continue
-        return False
+            except Exception:
+                return False
+
+    def obtener_elementos(self, selector: str):
+        return self.page.locator(selector)
 
     def scroll_al_final(self):
         try:
@@ -95,19 +97,19 @@ class BaseScraper:
         except Exception:
             pass
 
-    def debug_snapshot(self, nombre: str = "debug"):
+    def debug_snapshot(self, nombre="debug"):
+        """Guarda evidencia para GitHub Actions si ocurre un fallo."""
         try:
-            if self.page and not self.page.is_closed():
+            if self.page:
                 self.page.screenshot(path=f"{nombre}.png", full_page=True)
                 with open(f"{nombre}.html", "w", encoding="utf-8") as f:
                     f.write(self.page.content())
-                logger.warning(f"📸 Debug: {nombre}.png / {nombre}.html")
+                self.logger.warning(f"📸 Debug guardado: {nombre}.png / {nombre}.html")
         except Exception as e:
-            logger.error(f"No se pudo guardar snapshot: {e}")
+            self.logger.error(f"No se pudo guardar snapshot: {e}")
 
     def cerrar_navegador(self):
-        if not self._inicializado:
-            return
+        """Cierra de forma limpia los procesos."""
         try:
             if self.context:
                 self.context.close()
@@ -115,12 +117,6 @@ class BaseScraper:
                 self.browser.close()
             if self.playwright:
                 self.playwright.stop()
-            logger.info("🔒 Navegador cerrado")
+            self.logger.info("🔒 Navegador cerrado correctamente")
         except Exception as e:
-            logger.error(f"❌ Error al cerrar: {e}")
-        finally:
-            self._inicializado = False
-            self.page = None
-            self.context = None
-            self.browser = None
-            self.playwright = None
+            self.logger.error(f"❌ Error al cerrar navegador: {e}")
