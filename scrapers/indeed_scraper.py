@@ -54,8 +54,10 @@ class IndeedScraperPlaywright:
         puesto: str = "analista de datos",
         lugar: str = "lima",
         limite_ofertas: Optional[int] = None,
-        filtro_relevancia_cb: Optional[Callable] = None
+        filtro_relevancia_cb: Optional[Callable] = None,
+        urls_existentes: set = None
     ) -> List[dict]:
+        if urls_existentes is None: urls_existentes = set()
         if not self.page:
             await self.iniciar_navegador(headless=True)
             
@@ -113,8 +115,13 @@ class IndeedScraperPlaywright:
                         continue
                     
                     link_oferta = f"https://pe.indeed.com/viewjob?jk={data_jk}"
-                    if any(o["link_oferta"] == link_oferta for o in ofertas):
-                        continue
+                    
+                    # === FILTRO DE MEMORIA COMPARTIDA ===
+                    if link_oferta in urls_existentes: continue
+                    if any(o["link_oferta"] == link_oferta for o in ofertas): continue
+                    
+                    # Inmediatamente lo guardamos
+                    urls_existentes.add(link_oferta)
                     
                     try:
                         await tarjeta.scroll_into_view_if_needed(timeout=4000)
