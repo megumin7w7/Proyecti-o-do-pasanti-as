@@ -1,94 +1,111 @@
+"""
+Módulo: scrapers/linkedin_scraper.py
+Scroll infinito con detección de altura estable + extracción de empresa.
+"""
+from typing import Optional, Callable, List
+from loguru import logger
 from scrapers.base_scraper import BaseScraper
 from utils.url_cleaner import normalizar_termino_busqueda
+
 
 class LinkedInScraper(BaseScraper):
     def __init__(self):
         super().__init__()
         self.plataforma = "LinkedIn"
 
-    def recolectar_ofertas(self, limite_ofertas: int = 20, puesto: str = "", lugar: str = "", filtro_relevancia_cb=None) -> list:
+    def recolectar_ofertas(
+        self,
+        limite_ofertas: int = 20,
+        puesto: str = "",
+        lugar: str = "",
+        filtro_relevancia_cb: Optional[Callable] = None
+    ) -> List[dict]:
+        if not self.page:
+            self.iniciar_navegador()
+
         ofertas = []
-        
-        # LinkedIn usa el formato de búsqueda con signos '+' (ej: analista+de+datos)
         q_puesto = normalizar_termino_busqueda(puesto)["slug_mas"]
         q_lugar = normalizar_termino_busqueda(lugar)["slug_mas"]
-        
-        # Parámetro f_TPR=r2592000 filtra por los últimos 30 días para evitar resultados viejos
-        url_busqueda = f"https://pe.linkedin.com/jobs/search?keywords={q_puesto}&location={q_lugar}&f_TPR=r2592000"
-        
-        self.logger.info(f"🚀 LinkedIn -> Navegando a: {url_busqueda}")
-        
-        if not self.navegar_a(url_busqueda, wait_until="domcontentloaded"):
+
+        url = f"https://pe.linkedin.com/jobs/search?keywords={q_puesto}&location={q_lugar}&f_TPR=r2592000"
+        logger.info(f"🚀 LinkedIn: {url}")
+
+        if not self.navegar_a(url, wait_until="domcontentloaded"):
             return ofertas
-        
-        # LinkedIn deslogueado usa "infinite scroll". Hacemos un poco de scroll.
-        for _ in range(3):
+
+        altura_previa = 0
+        intentos_sin_cambio = 0
+        while intentos_sin_cambio < 5:
             self.scroll_al_final()
-            self.page.wait_for_timeout(1000)
-            
-        # ====================================================================
-        # 1. FASE DE RECOLECCIÓN (Solo copiamos los links, sin abrir nada)
-        # ====================================================================
+            self.page.wait_for_timeout(1200)
+            altura = self.page.evaluate("document.body.scrollHeight")
+            if altura == altura_previa:
+                intentos_sin_cambio += 1
+            else:
+                intentos_sin_cambio = 0
+                altura_previa = altura
+
         tarjetas = self.page.locator("a.base-card__full-link, a.job-search-card__title").all()
-        enlaces_pendientes = []
-        
+        pendientes = []
+
         for tarjeta in tarjetas:
-            if len(enlaces_pendientes) >= limite_ofertas: 
+            if len(pendientes) >= limite_ofertas * 2:
                 break
-                
             try:
                 href = tarjeta.get_attribute("href")
                 titulo = tarjeta.inner_text().strip()
-                
-                if not href: 
+                if not href:
                     continue
-                    
-                href = href.split('?')[0] # Limpiamos basura de tracking en la URL
-                
-                # Evitamos duplicados antes de navegar
-                if not any(e["link"] == href for e in enlaces_pendientes):
-                    enlaces_pendientes.append({"link": href, "titulo": titulo})
-                    
-            except Exception as e:
-                self.logger.debug(f"Error leyendo tarjeta básica: {e}")
+                href = href.split('?')[0]
+                if not any(p["link"] == href for p in pendientes):
+                    pendientes.append({"link": href, "titulo": titulo})
+            except Exception:
+                continue
 
-        self.logger.info(f"🔗 Se encontraron {len(enlaces_pendientes)} enlaces válidos. Iniciando extracción...")
+        logger.info(f"🔗 LinkedIn: {len(pendientes)} enlaces")
 
-        # ====================================================================
-        # 2. FASE DE EXTRACCIÓN (Visitamos cada link en la MISMA pestaña)
-        # ====================================================================
-        for item in enlaces_pendientes:
+        for item in pendientes[:limite_ofertas]:
             href = item["link"]
             titulo = item["titulo"]
-            
+
             try:
-                # Usamos goto en la pestaña principal, máximo 10 segundos
-                self.page.goto(href, wait_until="domcontentloaded", timeout=10000)
-                
-                # Cerramos modales molestos de "Inicia sesión"
+                self.page.goto(href, wait_until="domcontentloaded", timeout=12000)
                 try:
-                    self.page.evaluate("document.querySelectorAll('button.modal__dismiss, button.sign-in-modal__dismiss').forEach(b => b.click())")
-                except: 
+                    self.page.evaluate("""
+                        document.querySelectorAll('button.modal__dismiss, button.sign-in-modal__dismiss').forEach(b => b.click());
+                    """)
+                except Exception:
                     pass
-                
-                # Extraemos el texto
+
+                if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
+                    continue
+
+                empresa = "No especificada"
                 try:
-                    desc_locator = self.page.locator("div.show-more-less-html__markup, div.description__text").first
-                    texto_crudo = desc_locator.inner_text(timeout=3000)[:3000]
-                except:
-                    # Fallback si no encuentra el contenedor específico
-                    texto_crudo = self.page.inner_text("body", timeout=3000)[:3000]
-                    
-                if texto_crudo and len(texto_crudo) > 50:
+                    emp_sel = self.page.locator("a.topcard__org-name-link, span.topcard__flavor, a[href*='/company/']").first
+                    if emp_sel.count() > 0:
+                        empresa = emp_sel.inner_text().strip()
+                except Exception:
+                    pass
+
+                try:
+                    desc = self.page.locator("div.show-more-less-html__markup, div.description__text").first
+                    texto = desc.inner_text(timeout=4000)[:3000]
+                except Exception:
+                    texto = self.page.inner_text("body", timeout=3000)[:3000]
+
+                if texto and len(texto) > 50:
                     ofertas.append({
-                        "link_oferta": href, 
+                        "link_oferta": href,
                         "plataforma_origen": self.plataforma,
-                        "texto_crudo": texto_crudo, 
-                        "titulo_puesto": titulo
+                        "texto_crudo": texto,
+                        "titulo_puesto": titulo,
+                        "empresa_extraida": empresa
                     })
-                    self.logger.info(f"📦 Extrayendo: {titulo[:40]}")
-                    
+                    logger.debug(f"✅ LinkedIn: {titulo[:40]}")
+
             except Exception as e:
-                self.logger.debug(f"Saltando oferta de LinkedIn por demora (Timeout): {e}")
-                
+                logger.debug(f"LinkedIn timeout: {e}")
+
+        logger.info(f"✅ LinkedIn: {len(ofertas)} ofertas")
         return ofertas
