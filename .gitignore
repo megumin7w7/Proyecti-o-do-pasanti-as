@@ -1,0 +1,27 @@
+# Secretos y Configuración
+config/credentials.json
+.env
+*.env
+
+# Archivos temporales y de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Logs y datos locales
+logs/
+*.log
+debug_pagina_*.png
+*.parquet
+*.pkl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
