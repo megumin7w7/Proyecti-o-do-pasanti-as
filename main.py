@@ -130,7 +130,13 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
 
     # === NUEVA LÓGICA: MEMORIA COMPARTIDA ===
     # Creamos el Set de URLs históricas una sola vez al inicio
-    urls_globales = storage.obtener_urls_cacheadas()
+    # === NUEVA LÓGICA: MEMORIA COMPARTIDA ===
+    # Creamos el Set de URLs históricas una sola vez al inicio
+    try:
+        urls_globales = storage.obtener_urls_cacheadas()
+    except AttributeError:
+        logger.debug("Memoria compartida iniciando desde cero (BD vacía o método no implementado).")
+        urls_globales = set()
     
     try:
         for portal in portales:
