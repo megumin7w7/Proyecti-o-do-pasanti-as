@@ -20,7 +20,8 @@ class BumeranScraper(BaseScraper):
         except:
             pass
 
-    def recolectar_ofertas(self, limite_ofertas: int = 20, puesto: str = "", lugar: str = "", filtro_relevancia_cb=None) -> list:
+    def recolectar_ofertas(self, limite_ofertas: int = 20, puesto: str = "", lugar: str = "", filtro_relevancia_cb=None, urls_existentes: set = None) -> list:
+        if urls_existentes is None: urls_existentes = set()
         ofertas = []
         slug_puesto = normalizar_termino_busqueda(puesto)["slug_guiones"]
         
@@ -57,7 +58,13 @@ class BumeranScraper(BaseScraper):
                     
                     if not href: continue
                     if not href.startswith("http"): href = f"https://www.bumeran.com.pe{href}"
+                    
+                    # === FILTRO DE MEMORIA COMPARTIDA ===
+                    if href in urls_existentes: continue
                     if any(o['link_oferta'] == href for o in ofertas): continue
+                    
+                    # Inmediatamente lo guardamos para bloquearlo globalmente
+                    urls_existentes.add(href) 
                     
                     with self.context.expect_page() as nueva_pag_info:
                         self.page.evaluate(f"window.open('{href}', '_blank')")
