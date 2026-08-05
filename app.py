@@ -176,6 +176,12 @@ def cargar_datos(limite_filas=2000):
         rango_datos = f"A{fila_inicio}:{letra_final}{total_filas}" 
         data = worksheet.get(rango_datos)
         
+        largo_esperado = len(headers)
+        for fila in data:
+            if len(fila) < largo_esperado:
+                # Agrega espacios vacíos hasta igualar a los encabezados
+                fila.extend([''] * (largo_esperado - len(fila)))
+                
         return pd.DataFrame(data, columns=headers)
         
     except gspread.SpreadsheetNotFound:
