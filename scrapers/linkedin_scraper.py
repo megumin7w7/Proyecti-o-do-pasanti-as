@@ -6,7 +6,8 @@ class LinkedInScraper(BaseScraper):
         super().__init__()
         self.plataforma = "LinkedIn"
 
-    def recolectar_ofertas(self, limite_ofertas: int = 20, puesto: str = "", lugar: str = "", filtro_relevancia_cb=None) -> list:
+    def recolectar_ofertas(self, limite_ofertas: int = 20, puesto: str = "", lugar: str = "", filtro_relevancia_cb=None, urls_existentes: set = None) -> list:
+        if urls_existentes is None: urls_existentes = set()
         ofertas = []
         
         # LinkedIn usa el formato de búsqueda con signos '+' (ej: analista+de+datos)
@@ -40,14 +41,15 @@ class LinkedInScraper(BaseScraper):
                 href = tarjeta.get_attribute("href")
                 titulo = tarjeta.inner_text().strip()
                 
-                if not href: 
-                    continue
-                    
+                if not href: continue
                 href = href.split('?')[0] # Limpiamos basura de tracking en la URL
                 
-                # Evitamos duplicados antes de navegar
+                # === FILTRO DE MEMORIA COMPARTIDA ===
+                if href in urls_existentes: continue
+                
                 if not any(e["link"] == href for e in enlaces_pendientes):
                     enlaces_pendientes.append({"link": href, "titulo": titulo})
+                    urls_existentes.add(href) # Agregamos al Set global
                     
             except Exception as e:
                 self.logger.debug(f"Error leyendo tarjeta básica: {e}")
