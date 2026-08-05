@@ -1,157 +1,176 @@
-import os
+"""
+Módulo: nlp/ai_extractor.py
+Extracción de entidades con spaCy. Fallback si no está disponible.
+"""
 import re
-import spacy
+import subprocess
+import sys
+from typing import List, Dict
 from loguru import logger
+
+from config.settings import SPACY_MODEL_NAME
+
 
 class AIExtractor:
     def __init__(self):
-        self.modelo = "es_core_news_md"
+        self.nlp = self._cargar_modelo()
+
+    def _cargar_modelo(self):
         try:
-            # Intenta cargar el modelo. Si falla, lo descarga (solo la primera vez en HF)
-            self.nlp = spacy.load(self.modelo)
-            logger.info("✅ Modelo Spacy cargado exitosamente.")
-        except Exception:
-            logger.warning(f"⚠️ Modelo {self.modelo} no encontrado. Descargando...")
-            os.system(f"python -m spacy download {self.modelo}")
-            self.nlp = spacy.load(self.modelo)
-            logger.info("✅ Modelo Spacy descargado y cargado.")
+            import spacy
+            nlp = spacy.load(SPACY_MODEL_NAME)
+            logger.info("✅ Modelo spaCy cargado.")
+            return nlp
+        except OSError:
+            logger.warning(f"⚠️ Modelo {SPACY_MODEL_NAME} no encontrado. Descargando...")
+            try:
+                subprocess.check_call([sys.executable, "-m", "spacy", "download", SPACY_MODEL_NAME])
+                import spacy
+                return spacy.load(SPACY_MODEL_NAME)
+            except Exception as e:
+                logger.error(f"❌ No se pudo descargar spaCy: {e}. Usando fallback regex.")
+                return None
 
     def extraer_datos_oferta(self, texto_limpio: str) -> dict:
         if not texto_limpio or len(texto_limpio) < 20:
             return self._resultado_vacio()
-        
-        # Fix Python 3.13: (?i) estrictamente al inicio
-        texto_limpio = re.sub(r'(?i)(beneficios|requisitos)(subvención|estudiantes|experiencia|\b)', r'\1 \2', texto_limpio)
-        
-        # Limitar a 12000 caracteres para evitar sobrecarga de memoria en Spacy
-        doc = self.nlp(texto_limpio[:12000])
-        
-        requisitos_lista, beneficios_lista = self._minar_secciones(texto_limpio)
-        requisitos_estructurados = self._clasificar_requisitos(requisitos_lista)
-        
-        beneficios_formateados = "\n".join([f"• {b}" for b in beneficios_lista]) if beneficios_lista else "• Beneficios de ley."
-        
-        # Extracción de atributos
-        modalidad = self._extraer_modalidad(texto_limpio)
-        horario = self._extraer_horario(texto_limpio)
-        nivel = self._extraer_nivel(texto_limpio)
-        departamento = self._extraer_departamento(texto_limpio)
-        titulo = self._extraer_titulo(texto_limpio)
-        empresa = self._extraer_empresa(doc, texto_limpio, titulo)
-        
-        # Descripción breve inteligente
-        desc_breve = self._extraer_descripcion_breve(texto_limpio)
-        
+
+        texto = texto_limpio[:12000]
+        doc = self.nlp(texto) if self.nlp else None
+
+        requisitos, beneficios = self._minar_secciones(texto)
+        requisitos_est = self._clasificar_requisitos(requisitos)
+
         return {
-            "titulo_puesto": titulo,
-            "empresa": empresa,
-            "modalidad": modalidad,
-            "nivel": nivel,
-            "horario": horario,
-            "departamento": departamento,
-            "descripcion_breve": desc_breve,
-            "beneficios": beneficios_formateados,
-            "requisitos": requisitos_estructurados
+            "titulo_puesto": self._extraer_titulo(texto),
+            "empresa": self._extraer_empresa(doc, texto),
+            "modalidad": self._extraer_modalidad(texto),
+            "nivel": self._extraer_nivel(texto),
+            "horario": self._extraer_horario(texto),
+            "departamento": self._extraer_departamento(texto),
+            "descripcion_breve": self._extraer_descripcion_breve(texto),
+            "beneficios": "\n".join(f"• {b}" for b in beneficios) if beneficios else "• Beneficios de ley.",
+            "requisitos": requisitos_est
         }
 
     def _minar_secciones(self, texto: str) -> tuple:
         lineas = texto.split('\n')
         requisitos, beneficios = [], []
-        estado_actual = None
-        
+        estado = None
+
         for linea in lineas:
-            linea_s = linea.strip()
-            if not linea_s: continue
-            linea_lower = linea_s.lower()
-            
-            if "requisito" in linea_lower or "perfil" in linea_lower:
-                estado_actual = "requisitos"
+            s = linea.strip()
+            if not s:
                 continue
-            elif "beneficio" in linea_lower or "ofrecemos" in linea_lower:
-                estado_actual = "beneficios"
+            sl = s.lower()
+
+            if any(x in sl for x in ["requisito", "perfil", "requerimiento"]):
+                estado = "requisitos"
                 continue
-            elif any(x in linea_lower for x in ["misión:", "responsabilidades:", "funciones:"]):
-                estado_actual = "funciones"
+            elif any(x in sl for x in ["beneficio", "ofrecemos", "te ofrecemos"]):
+                estado = "beneficios"
                 continue
-                
-            if estado_actual == "requisitos" and len(linea_s) > 5:
-                if any(x in linea_lower for x in ["beneficio", "ofrecemos", "funciones"]): break
-                requisitos.append(linea_s)
-            elif estado_actual == "beneficios" and len(linea_s) > 5:
-                if any(x in linea_lower for x in ["requisito", "perfil"]): break
-                beneficios.append(linea_s)
-                
+            elif any(x in sl for x in ["funciones", "responsabilidades", "actividades"]):
+                estado = "funciones"
+                continue
+
+            if estado == "requisitos" and len(s) > 5:
+                if any(x in sl for x in ["beneficio", "ofrecemos", "funciones"]):
+                    continue
+                requisitos.append(s)
+            elif estado == "beneficios" and len(s) > 5:
+                if any(x in sl for x in ["requisito", "perfil", "funciones"]):
+                    continue
+                beneficios.append(s)
+
         return requisitos, beneficios
 
-    def _clasificar_requisitos(self, requisitos_lista: list) -> list:
-        estructurados = []
-        patrones_deseable = ['deseable', 'valorable', 'preferible', 'preferentemente', 'plus']
-        
-        for req in requisitos_lista:
-            req_lower = req.lower()
-            tipo = "Indispensable" if not any(p in req_lower for p in patrones_deseable) else "Deseable"
-            req_limpio = re.sub(r'(?i)^(deseable|indispensable|requisito)\s*[:\-]?\s*', '', req).strip()
-            estructurados.append({"texto": req_limpio.capitalize(), "tipo": tipo})
-            
-        return estructurados
+    def _clasificar_requisitos(self, reqs: List[str]) -> List[Dict]:
+        patrones = ['deseable', 'valorable', 'preferible', 'preferentemente', 'plus', 'sería']
+        resultado = []
+        for req in reqs:
+            rl = req.lower()
+            tipo = "Deseable" if any(p in rl for p in patrones) else "Indispensable"
+            limpio = re.sub(r'(?i)^(deseable|indispensable|requisito)\s*[:\-]?\s*', '', req).strip()
+            resultado.append({"texto": limpio.capitalize(), "tipo": tipo})
+        return resultado
 
     def _extraer_modalidad(self, texto: str) -> str:
         t = texto.lower()
-        if any(x in t for x in ['remoto', 'home office', 'desde casa']): return "Remoto"
-        if any(x in t for x in ['hibrido', 'híbrido', 'semipresencial']): return "Híbrido"
+        if any(x in t for x in ['remoto', 'home office', 'desde casa', 'teletrabajo', 'remote']):
+            return "Remoto"
+        if any(x in t for x in ['hibrido', 'híbrido', 'semipresencial', 'hybrid']):
+            return "Híbrido"
         return "Presencial"
 
     def _extraer_horario(self, texto: str) -> str:
-        if any(x in texto.lower() for x in ['part time', 'medio tiempo', 'tiempo parcial']): return "Medio Tiempo"
+        t = texto.lower()
+        if any(x in t for x in ['part time', 'medio tiempo', 'tiempo parcial', 'half time', '4 horas']):
+            return "Medio Tiempo"
         return "Tiempo Completo"
 
     def _extraer_nivel(self, texto: str) -> str:
         t = texto.lower()
-        if any(x in t for x in ['practicante', 'practica', 'práctica', 'pre profesional']): return "Práctica"
-        if 'trainee' in t: return "Trainee"
-        if 'junior' in t or 'jr' in t: return "Junior"
+        if any(x in t for x in ['practicante', 'practica', 'práctica', 'pre profesional', 'pasantía']):
+            return "Práctica"
+        if 'trainee' in t:
+            return "Trainee"
+        if any(x in t for x in ['junior', 'jr', 'entry level']):
+            return "Junior"
+        if any(x in t for x in ['senior', 'sr', 'lider', 'coordinador']):
+            return "Senior"
         return "Practicante"
 
     def _extraer_departamento(self, texto: str) -> str:
-        departamentos = ["Lima", "Arequipa", "La Libertad", "Piura", "Lambayeque", "Ica", "Ancash", "Cusco", "Callao"]
-        for dep in departamentos:
+        deps = ["Lima", "Arequipa", "La Libertad", "Piura", "Lambayeque", "Ica", "Ancash", "Cusco", "Callao", "Junín", "San Martín"]
+        for dep in deps:
             if re.search(r'\b' + dep + r'\b', texto, re.IGNORECASE):
                 return dep
         return "Lima"
 
-    def _extraer_empresa(self, doc, texto: str, titulo: str) -> str:
+    def _extraer_empresa(self, doc, texto: str) -> str:
+        if doc:
+            for ent in doc.ents:
+                if ent.label_ == "ORG":
+                    nombre = ent.text.strip()
+                    if len(nombre) > 3 and not any(x in nombre.lower() for x in ['login', 'ofertas', 'empleos']):
+                        return nombre
+
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
-        basura_ui = ['login', 'crear cv', 'volver', 'listado', 'ofertas', 'salarios', 'empresa', 'evaluaciones', 'descripción']
+        basura = {'login', 'crear cv', 'volver', 'listado', 'ofertas', 'salarios', 'empresa', 'evaluaciones', 'descripción', 'buscar'}
         for linea in lineas[:15]:
-            l_lower = linea.lower()
-            if l_lower != titulo.lower() and not any(b in l_lower for b in basura_ui) and len(linea) > 3:
+            ll = linea.lower()
+            if len(linea) > 3 and len(linea) < 60 and not any(b in ll for b in basura):
                 return linea.split('-')[0].strip()
         return "Confidencial"
 
     def _extraer_titulo(self, texto: str) -> str:
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
-        basura_ui = ['login', 'crear cv', 'volver', 'listado', 'ofertas', 'salarios', 'empresa', 'evaluaciones', 'descripción']
+        basura = {'login', 'crear cv', 'volver', 'listado', 'ofertas', 'salarios', 'empresa', 'evaluaciones', 'descripción'}
         for l in lineas:
-            l_lower = l.lower()
-            if not any(b in l_lower for b in basura_ui) and len(l) > 8:
+            ll = l.lower()
+            if not any(b in ll for b in basura) and len(l) > 8 and len(l) < 120:
                 return l
         return "Practicante"
 
-    def _extraer_descripcion_breve(self, texto_limpio: str) -> str:
-        lineas = [l.strip() for l in texto_limpio.split('\n') if len(l.strip()) > 0]
-        desc_breve = ""
+    def _extraer_descripcion_breve(self, texto: str) -> str:
+        lineas = [l.strip() for l in texto.split('\n') if len(l.strip()) > 20]
         for linea in lineas:
-            if len(linea) > 80 and not any(x in linea.lower() for x in ['requisito:', 'beneficio:', 'ofrecemos:', 'funciones:']):
-                desc_breve = linea
-                break
-        if not desc_breve:
-            desc_breve = " ".join(lineas[4:7]) if len(lineas) >= 7 else " ".join(lineas)
-        desc_breve = re.sub(r'(?i)(beneficios|requisitos|funciones).*', '', desc_breve).strip()
-        return desc_breve[:350] + ("..." if len(desc_breve) > 350 else "")
+            ll = linea.lower()
+            if len(linea) > 80 and not any(x in ll for x in ['requisito:', 'beneficio:', 'ofrecemos:', 'funciones:']):
+                desc = re.sub(r'(?i)(beneficios|requisitos|funciones).*', '', linea).strip()
+                return desc[:350] + ("..." if len(desc) > 350 else "")
+        return " ".join(lineas[:3]) if lineas else ""
 
     def _resultado_vacio(self) -> dict:
         return {
-            "titulo_puesto": "Practicante", "empresa": "Confidencial", "modalidad": "Presencial", 
-            "nivel": "Práctica", "horario": "Tiempo Completo", "departamento": "Lima", 
-            "descripcion_breve": "", "beneficios": "", "requisitos": []
+            "titulo_puesto": "Practicante",
+            "empresa": "Confidencial",
+            "modalidad": "Presencial",
+            "nivel": "Práctica",
+            "horario": "Tiempo Completo",
+            "departamento": "Lima",
+            "descripcion_breve": "",
+            "beneficios": "",
+            "requisitos": []
         }
