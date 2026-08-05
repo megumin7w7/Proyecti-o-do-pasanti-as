@@ -228,9 +228,9 @@ if __name__ == "__main__":
     logger.add(sys.stderr, format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{message}</cyan>", level="INFO")
     
     limites_dinamicos = {
-        "Computrabajo": 150,
-        "Bumeran": 150,
-        "LinkedIn": 150,
+        "Computrabajo": 10,
+        "Bumeran": 10,
+        "LinkedIn": 10,
         "Indeed": 20
     }
     
