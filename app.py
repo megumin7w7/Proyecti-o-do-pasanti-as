@@ -146,8 +146,12 @@ st.sidebar.info("💡 **Nota:** Las búsquedas se guardan automáticamente en tu
 # ==============================================================================
 # 3. CARGA DE DATOS DESDE GOOGLE SHEETS
 # ==============================================================================
+# ==============================================================================
+# 3. CARGA DE DATOS DESDE GOOGLE SHEETS (OPTIMIZADA)
+# ==============================================================================
 @st.cache_data(ttl=300)
-def cargar_datos():
+def cargar_datos(limite_filas=2000):
+    """Carga solo las ofertas más recientes para evitar OOM (Out of Memory) en Streamlit."""
     try:
         client = get_sheets_client()
         if not client:
@@ -156,8 +160,22 @@ def cargar_datos():
             
         sheet = client.open("Laboral_AI_Scraper_Data")
         worksheet = sheet.worksheet("Ofertas_Extraidas")
-        data = worksheet.get_all_records()
-        return pd.DataFrame(data)
+        
+        # Determinar total de filas reales basándose en la columna ID (A)
+        total_filas = len(worksheet.col_values(1))
+        if total_filas <= 1:
+            return pd.DataFrame()
+        
+        # Paginar: calcular el rango de las últimas 'limite_filas'
+        fila_inicio = max(2, total_filas - limite_filas + 1)
+        
+        # Obtener encabezados de la fila 1 y los datos del rango calculado
+        headers = worksheet.row_values(1)
+        rango_datos = f"A{fila_inicio}:N{total_filas}" 
+        data = worksheet.get(rango_datos)
+        
+        return pd.DataFrame(data, columns=headers)
+        
     except gspread.SpreadsheetNotFound:
         st.error("❌ No se encontró la hoja 'Laboral_AI_Scraper_Data'. Verifica el nombre exacto.")
         return pd.DataFrame()
