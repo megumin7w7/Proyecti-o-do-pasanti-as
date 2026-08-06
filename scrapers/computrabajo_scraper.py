@@ -4,6 +4,7 @@ Módulo: scrapers/computrabajo_scraper.py (Migrado a Playwright)
 import time
 from scrapers.base_scraper import BaseScraper
 from loguru import logger
+from utils.time_parser import calcular_dias_antiguedad
 
 class ComputrabajoScraper(BaseScraper):
     """Scraper específico para Computrabajo usando Playwright"""
@@ -75,6 +76,15 @@ class ComputrabajoScraper(BaseScraper):
                         elem = ofertas_locator.nth(i)
                         href = elem.get_attribute("href")
                         titulo = elem.inner_text().strip()
+                        
+                        # 🚀 TRUCO: Subimos al 'article' padre para leer la fecha de la tarjeta completa
+                        texto_tarjeta = elem.evaluate("el => el.closest('article') ? el.closest('article').innerText : el.innerText")
+                        
+                        # ⏳ FILTRO DE ANTIGÜEDAD AQUÍ
+                        dias = calcular_dias_antiguedad(texto_tarjeta)
+                        if dias > 45:
+                            self.logger.debug(f"⏳ Descartada por vieja ({dias} días): {href}")
+                            continue
                         
                         if not href or not titulo: 
                             continue
