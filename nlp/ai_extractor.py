@@ -133,18 +133,7 @@ class AIExtractor:
     def _extraer_empresa(self, doc, texto: str) -> str:
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
 
-        # 🎯 FRANCOTIRADOR BUMERAN: La empresa está siempre 1 línea arriba de "Seguir empresa"
-        for i, linea in enumerate(lineas):
-            if "seguir empresa" in linea.lower() and i >= 1:
-                empresa = lineas[i-1]
-                # A veces Bumeran pone la calificación (ej. "3.1" o "4.8") arriba de "Seguir empresa"
-                if re.match(r'^\d+(\.\d+)?$', empresa) and i >= 2:
-                    empresa = lineas[i-2]
-                
-                if len(empresa) > 2:
-                    return empresa
-
-        # 🧠 SENTIDO COMÚN: Lista negra expandida de falsas empresas
+        # 🧠 SENTIDO COMÚN: Lista negra expansiva (Bloqueando "importante empresa", "ing.", etc.)
         basura_empresas = {
             'login', 'ofertas', 'empleos', 'salarios', 'blog', 'linkedin', 
             'marketing', 'publicidad', 'contar', 'of lima', 'selección', 
@@ -153,19 +142,43 @@ class AIExtractor:
             'evaluaciones', 'descripción', 'buscar', 'bumeran', 'computrabajo',
             'continue', 'brand', 'bachiller', 'egresado', 'postula', 'automotrices',
             'google', 'jump', 'técnico titulado', 'participación', 'reporte', 
-            'estudiantes', 'ingreso', 'brandeo', 'prácticas', 'funciones', 'bolsa de empleo'
+            'estudiantes', 'ingreso', 'brandeo', 'prácticas', 'funciones', 'bolsa de empleo',
+            'importante empresa', 'administración', 'ing.', 'química', 'industrial',
+            'ingeniería', 'confidencial', 'unidos!', 'presencial', 'remoto', 'híbrido',
+            'actualizado'
         }
-        
+
+        # 🎯 NUEVO CAZADOR: "Somos [Nombre de la Empresa]"
+        for linea in lineas[:10]: # Buscamos solo en los primeros párrafos
+            if linea.lower().startswith("somos "):
+                import re
+                # Extraemos lo que sigue de "Somos " hasta la primera coma o punto
+                candidato = re.split(r'[,|.]', linea)[0].replace("Somos ", "").replace("somos ", "").strip()
+                if 3 < len(candidato) <= 40 and not any(b in candidato.lower() for b in basura_empresas):
+                    return candidato
+
+        # 🎯 FRANCOTIRADOR BUMERAN (Con filtro de basura integrado)
+        for i, linea in enumerate(lineas):
+            if "seguir empresa" in linea.lower() and i >= 1:
+                empresa = lineas[i-1]
+                if re.match(r'^\d+(\.\d+)?$', empresa) and i >= 2:
+                    empresa = lineas[i-2]
+                
+                if len(empresa) > 2 and not any(b in empresa.lower() for b in basura_empresas):
+                    return empresa
+
+        # 1. Intento con spaCy (Modelo de IA)
         if doc:
             for ent in doc.ents:
                 if ent.label_ == "ORG":
                     nombre = ent.text.strip()
-                    if 3 < len(nombre) <= 30 and not any(x in nombre.lower() for x in basura_empresas):
+                    if 3 < len(nombre) <= 40 and not any(x in nombre.lower() for x in basura_empresas):
                         return nombre
 
+        # 2. Intento de respaldo (Fallback)
         for linea in lineas[:15]:
             ll = linea.lower()
-            if 3 < len(linea) <= 30 and not any(b in ll for b in basura_empresas):
+            if 3 < len(linea) <= 40 and not any(b in ll for b in basura_empresas):
                 return linea.split('-')[0].strip()
                 
         return "Confidencial"
@@ -173,28 +186,36 @@ class AIExtractor:
     def _extraer_titulo(self, texto: str) -> str:
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
         
-        # 🎯 FRANCOTIRADOR BUMERAN: El título está siempre 2 líneas arriba de "Seguir empresa"
-        for i, linea in enumerate(lineas):
-            if "seguir empresa" in linea.lower() and i >= 2:
-                # Nos aseguramos de no devolver un número o calificación
-                if len(lineas[i-2]) > 5:
-                    return lineas[i-2]
-
-        # 🧠 SENTIDO COMÚN: Lista negra de títulos
+        # 🧠 SENTIDO COMÚN: Lista negra de títulos (¡Ahora también aplica al francotirador!)
         basura = {
             'login', 'crear cv', 'volver', 'listado', 'ofertas', 'salarios', 
             'empresa', 'evaluaciones', 'descripción', 'actualizado', 
             'hace más de', 'blog', 'publicado', 'días', 'horas', 'bumeran',
-            'computrabajo', 'postula', 'bolsa de empleo', 'presencial'
+            'computrabajo', 'postula', 'bolsa de empleo', 'presencial', 
+            'híbrido', 'remoto', 'tiempo completo', 'medio tiempo'
         }
         
+        # 🎯 FRANCOTIRADOR BUMERAN (Ahora con filtro de basura integrado)
+        for i, linea in enumerate(lineas):
+            if "seguir empresa" in linea.lower() and i >= 2:
+                candidato = lineas[i-2]
+                # Si el candidato está limpio, lo devolvemos
+                if len(candidato) > 5 and not any(b in candidato.lower() for b in basura):
+                    return candidato
+                # Si el candidato era basura (ej. "Actualizado"), probamos una línea más arriba
+                elif i >= 3:
+                    candidato_alt = lineas[i-3]
+                    if len(candidato_alt) > 5 and not any(b in candidato_alt.lower() for b in basura):
+                        return candidato_alt
+
+        # RESPALDO LEYENDO LÍNEAS
         for l in lineas:
             ll = l.lower()
-            if not any(b in ll for b in basura) and len(l) > 5 and len(l) < 120:
+            if not any(b in ll for b in basura) and 5 < len(l) < 120:
                 return l
                 
         return "Practicante"
-
+        
     def _extraer_descripcion_breve(self, texto: str) -> str:
         lineas = [l.strip() for l in texto.split('\n') if len(l.strip()) > 20]
         for linea in lineas:
