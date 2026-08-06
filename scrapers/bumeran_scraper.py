@@ -1,5 +1,5 @@
 """
-Módulo: scrapers/bumeran_scraper.py (Optimizado)
+Módulo: scrapers/bumeran_scraper.py (Corregido y Estable)
 """
 from scrapers.base_scraper import BaseScraper
 from utils.url_cleaner import normalizar_termino_busqueda
@@ -40,8 +40,6 @@ class BumeranScraper(BaseScraper):
             
             # 2. Obligamos a Playwright a esperar hasta que exista al menos una tarjeta
             try:
-                # 🚀 OPTIMIZACIÓN 1 (Agujero negro): Bajamos el timeout de 10000 a 3000 ms (3 segundos). 
-                # Si no carga en 3 segundos, asumimos que no hay más ofertas y pasamos a lo siguiente.
                 self.page.wait_for_selector("a[href*='/empleos/']", timeout=3000)
             except:
                 self.logger.warning(f"⚠️ No se encontraron ofertas a tiempo en Bumeran (Página {pagina})")
@@ -73,15 +71,18 @@ class BumeranScraper(BaseScraper):
                     
                     nueva_pag = nueva_pag_info.value
                     
-                    # 🚀 OPTIMIZACIÓN 2 (Velocidad ninja): Cambiamos 'domcontentloaded' por 'commit'
-                    # Esto hace que no espere a que carguen imágenes u otros recursos pesados.
-                    nueva_pag.wait_for_load_state("commit", timeout=5000)
+                    # 🛠️ CORRECCIÓN 1: Volvemos a 'domcontentloaded' para asegurar que la estructura esté lista
+                    nueva_pag.wait_for_load_state("domcontentloaded", timeout=5000)
                     
                     try:
-                        cuerpo = nueva_pag.locator("[id*='aviso-description'], [class*='aviso-description'], div[class*='Description']").first
-                        texto_crudo = cuerpo.inner_text(timeout=1000)[:3000]
+                        # 🛠️ CORRECCIÓN 2: Selector ampliado y espera de 5 segundos para que Bumeran inyecte el texto
+                        cuerpo = nueva_pag.locator("[id*='aviso-description'], [class*='aviso-description'], div[class*='Description'], h2:has-text('Descripción') + div").first
+                        cuerpo.wait_for(state="visible", timeout=5000)
+                        texto_crudo = cuerpo.inner_text()[:4000]
                     except:
-                        texto_crudo = nueva_pag.inner_text("body", timeout=1000)[:3000]
+                        # Plan B: Si falla el selector, esperamos 2 segundos a la fuerza para que cargue lo que falta y leemos todo
+                        nueva_pag.wait_for_timeout(2000)
+                        texto_crudo = nueva_pag.inner_text("body", timeout=2000)[:4000]
                         
                     if texto_crudo and len(texto_crudo) > 50:
                         ofertas.append({
