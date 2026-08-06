@@ -54,7 +54,16 @@ class BumeranScraper(BaseScraper):
                 
                 try:
                     href = enlace.get_attribute("href")
-                    titulo = enlace.inner_text().strip() or puesto
+                    texto_tarjeta = enlace.inner_text().strip()
+                    
+                    # 🧹 LIMPIEZA DE TÍTULO DESDE EL SCRAPER
+                    lineas_tarjeta = [l.strip() for l in texto_tarjeta.split('\n') if l.strip()]
+                    titulo_limpio = puesto # fallback
+                    for linea in lineas_tarjeta:
+                        # Si la línea no es una fecha ni etiqueta, asumimos que es el título real
+                        if not any(b in linea.lower() for b in ['actualizado', 'hace', 'promocionado', 'nuevo', 'días', 'horas']):
+                            titulo_limpio = linea
+                            break
                     
                     if not href: continue
                     if not href.startswith("http"): href = f"https://www.bumeran.com.pe{href}"
@@ -89,9 +98,10 @@ class BumeranScraper(BaseScraper):
                             "link_oferta": href, 
                             "plataforma_origen": self.plataforma,
                             "texto_crudo": texto_crudo, 
-                            "titulo_puesto": titulo.split('\n')[0] 
+                            # 🚀 AQUÍ APLICAMOS EL TÍTULO LIMPIO
+                            "titulo_puesto": titulo_limpio 
                         })
-                        self.logger.debug(f"✅ Extrayendo: {titulo[:40]}")
+                        self.logger.debug(f"✅ Extrayendo: {titulo_limpio[:40]}")
                         
                 except Exception as e:
                     self.logger.debug(f"Error procesando oferta de Bumeran: {e}")
