@@ -129,7 +129,20 @@ class AIExtractor:
         return "Lima"
 
     def _extraer_empresa(self, doc, texto: str) -> str:
-        # 🧠 SENTIDO COMÚN: Agregamos las nuevas falsas empresas detectadas
+        lineas = [l.strip() for l in texto.split('\n') if l.strip()]
+
+        # 🎯 FRANCOTIRADOR BUMERAN: La empresa está siempre 1 línea arriba de "Seguir empresa"
+        for i, linea in enumerate(lineas):
+            if "seguir empresa" in linea.lower() and i >= 1:
+                empresa = lineas[i-1]
+                # A veces Bumeran pone la calificación (ej. "3.1" o "4.8") arriba de "Seguir empresa"
+                if re.match(r'^\d+(\.\d+)?$', empresa) and i >= 2:
+                    empresa = lineas[i-2]
+                
+                if len(empresa) > 2:
+                    return empresa
+
+        # 🧠 SENTIDO COMÚN: Lista negra expandida de falsas empresas
         basura_empresas = {
             'login', 'ofertas', 'empleos', 'salarios', 'blog', 'linkedin', 
             'marketing', 'publicidad', 'contar', 'of lima', 'selección', 
@@ -138,7 +151,7 @@ class AIExtractor:
             'evaluaciones', 'descripción', 'buscar', 'bumeran', 'computrabajo',
             'continue', 'brand', 'bachiller', 'egresado', 'postula', 'automotrices',
             'google', 'jump', 'técnico titulado', 'participación', 'reporte', 
-            'estudiantes', 'ingreso', 'brandeo', 'prácticas', 'funciones'
+            'estudiantes', 'ingreso', 'brandeo', 'prácticas', 'funciones', 'bolsa de empleo'
         }
         
         if doc:
@@ -148,7 +161,6 @@ class AIExtractor:
                     if 3 < len(nombre) <= 30 and not any(x in nombre.lower() for x in basura_empresas):
                         return nombre
 
-        lineas = [l.strip() for l in texto.split('\n') if l.strip()]
         for linea in lineas[:15]:
             ll = linea.lower()
             if 3 < len(linea) <= 30 and not any(b in ll for b in basura_empresas):
@@ -159,12 +171,19 @@ class AIExtractor:
     def _extraer_titulo(self, texto: str) -> str:
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
         
+        # 🎯 FRANCOTIRADOR BUMERAN: El título está siempre 2 líneas arriba de "Seguir empresa"
+        for i, linea in enumerate(lineas):
+            if "seguir empresa" in linea.lower() and i >= 2:
+                # Nos aseguramos de no devolver un número o calificación
+                if len(lineas[i-2]) > 5:
+                    return lineas[i-2]
+
         # 🧠 SENTIDO COMÚN: Lista negra de títulos
         basura = {
             'login', 'crear cv', 'volver', 'listado', 'ofertas', 'salarios', 
             'empresa', 'evaluaciones', 'descripción', 'actualizado', 
             'hace más de', 'blog', 'publicado', 'días', 'horas', 'bumeran',
-            'computrabajo', 'postula'
+            'computrabajo', 'postula', 'bolsa de empleo', 'presencial'
         }
         
         for l in lineas:
@@ -186,7 +205,7 @@ class AIExtractor:
     def _resultado_vacio(self) -> dict:
         return {
             "titulo_puesto": "Practicante",
-            "empresa": "Confidencial",
+            "empresa": "Importante Empresa en el Sector",
             "modalidad": "Presencial",
             "nivel": "Práctica",
             "horario": "Tiempo Completo",
