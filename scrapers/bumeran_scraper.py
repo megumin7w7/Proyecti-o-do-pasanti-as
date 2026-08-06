@@ -40,7 +40,9 @@ class BumeranScraper(BaseScraper):
             
             # 2. Obligamos a Playwright a esperar hasta que exista al menos una tarjeta
             try:
-                self.page.wait_for_selector("a[href*='/empleos/']", timeout=10000)
+                # 🚀 OPTIMIZACIÓN 1 (Agujero negro): Bajamos el timeout de 10000 a 3000 ms (3 segundos). 
+                # Si no carga en 3 segundos, asumimos que no hay más ofertas y pasamos a lo siguiente.
+                self.page.wait_for_selector("a[href*='/empleos/']", timeout=3000)
             except:
                 self.logger.warning(f"⚠️ No se encontraron ofertas a tiempo en Bumeran (Página {pagina})")
                 break
@@ -70,7 +72,10 @@ class BumeranScraper(BaseScraper):
                         self.page.evaluate(f"window.open('{href}', '_blank')")
                     
                     nueva_pag = nueva_pag_info.value
-                    nueva_pag.wait_for_load_state("domcontentloaded", timeout=5000)
+                    
+                    # 🚀 OPTIMIZACIÓN 2 (Velocidad ninja): Cambiamos 'domcontentloaded' por 'commit'
+                    # Esto hace que no espere a que carguen imágenes u otros recursos pesados.
+                    nueva_pag.wait_for_load_state("commit", timeout=5000)
                     
                     try:
                         cuerpo = nueva_pag.locator("[id*='aviso-description'], [class*='aviso-description'], div[class*='Description']").first
