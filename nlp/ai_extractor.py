@@ -153,7 +153,8 @@ class AIExtractor:
             if linea.lower().startswith("somos "):
                 # Extraemos lo que sigue de "Somos " hasta la primera coma o punto
                 candidato = re.split(r'[,|.]', linea)[0].replace("Somos ", "").replace("somos ", "").strip()
-                if 3 < len(candidato) <= 40 and not any(b in candidato.lower() for b in basura_empresas):
+                # 🚀 AUMENTAMOS EL LÍMITE A 65 CARACTERES
+                if 3 < len(candidato) <= 65 and not any(b in candidato.lower() for b in basura_empresas):
                     return candidato
 
         # 🎯 FRANCOTIRADOR BUMERAN (Con filtro de basura integrado)
