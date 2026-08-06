@@ -5,7 +5,7 @@ from urllib.parse import unquote
 import re
 from scrapers.base_scraper import BaseScraper
 from utils.url_cleaner import normalizar_termino_busqueda
-
+from utils.time_parser import calcular_dias_antiguedad
 class LinkedInScraper(BaseScraper):
     def __init__(self):
         super().__init__()
@@ -44,11 +44,17 @@ class LinkedInScraper(BaseScraper):
                 
             try:
                 href = tarjeta.get_attribute("href")
-                titulo = tarjeta.inner_text().strip()
+                texto_tarjeta = tarjeta.inner_text().strip()
+                
+                # ⏳ FILTRO DE ANTIGÜEDAD AQUÍ
+                dias = calcular_dias_antiguedad(texto_tarjeta)
+                if dias > 45:
+                    continue
+                
+                titulo = texto_tarjeta.split('\n')[0] if '\n' in texto_tarjeta else texto_tarjeta
                 
                 if not href: continue
-                href = href.split('?')[0] # Limpiamos basura de tracking en la URL
-                
+                href = href.split('?')[0] # Limpiamos basura de tracking en la URL                
                 # === FILTRO DE MEMORIA COMPARTIDA ===
                 if href in urls_existentes: continue
                 
