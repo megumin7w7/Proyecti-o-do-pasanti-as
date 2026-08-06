@@ -1,6 +1,7 @@
 """
 Módulo: scrapers/linkedin_scraper.py
 """
+from urllib.parse import unquote
 import re
 from scrapers.base_scraper import BaseScraper
 from utils.url_cleaner import normalizar_termino_busqueda
@@ -96,8 +97,10 @@ class LinkedInScraper(BaseScraper):
                 empresa_ninja = ""
                 match = re.search(r'-at-(.*?)-\d+$', href)
                 if match:
-                    # Quitamos guiones y capitalizamos (ej: cartavio-rum-company-s-a-c -> Cartavio Rum Company S A C)
-                    empresa_ninja = match.group(1).replace('-', ' ').title()
+                    # 1. Decodificamos caracteres extraños (ej. %C3%BA -> ú)
+                    texto_url = unquote(match.group(1))
+                    # 2. Quitamos guiones y capitalizamos
+                    empresa_ninja = texto_url.replace('-', ' ').title()
                 
                 # Inyectamos el salvavidas al inicio del texto crudo
                 if empresa_ninja:
