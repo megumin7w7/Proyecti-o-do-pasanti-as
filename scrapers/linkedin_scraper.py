@@ -60,37 +60,40 @@ class LinkedInScraper(BaseScraper):
         # 2. FASE DE EXTRACCIÓN (Visitamos cada link en la MISMA pestaña)
         # ====================================================================
         for item in enlaces_pendientes:
+            
+            # 🛑 AQUÍ VA EL FRENO DE EMERGENCIA
+            # Revisa cuántas ofertas llevamos ANTES de abrir la siguiente página
+            if len(ofertas_recopiladas) >= limite_ofertas:
+                self.logger.info(f"🎯 Límite de {limite_ofertas} ofertas alcanzado. Deteniendo extracción.")
+                break
+                
             href = item["link"]
             titulo = item["titulo"]
             
             try:
-                # Usamos goto en la pestaña principal, máximo 10 segundos
-                self.page.goto(href, wait_until="domcontentloaded", timeout=10000)
+                # 🚀 OPTIMIZACIÓN 1: "commit" corta la espera apenas llega el esqueleto de la página.
+                self.navegar_a(href, wait_until="commit", timeout=10000)
                 
-                # Cerramos modales molestos de "Inicia sesión"
+                # 🚀 OPTIMIZACIÓN 2: Eliminamos el sleep de 1000ms. 
+                # Playwright es inteligente y usará este inner_text para esperar solo lo estrictamente necesario.
                 try:
-                    self.page.evaluate("document.querySelectorAll('button.modal__dismiss, button.sign-in-modal__dismiss').forEach(b => b.click())")
-                except: 
-                    pass
-                
-                # Extraemos el texto
-                try:
-                    desc_locator = self.page.locator("div.show-more-less-html__markup, div.description__text").first
-                    texto_crudo = desc_locator.inner_text(timeout=3000)[:3000]
+                    cuerpo = self.page.locator("main, section.job-description, div.offer_requirements, .job-description").first
+                    texto_crudo = cuerpo.inner_text(timeout=2500)[:4000]
                 except:
-                    # Fallback si no encuentra el contenedor específico
-                    texto_crudo = self.page.inner_text("body", timeout=3000)[:3000]
-                    
+                    # Plan B rápido si no encuentra los selectores principales
+                    texto_crudo = self.page.inner_text("body", timeout=2500)[:4000]
+                
                 if texto_crudo and len(texto_crudo) > 50:
-                    ofertas.append({
-                        "link_oferta": href, 
+                    ofertas_recopiladas.append({
+                        "link_oferta": href,
                         "plataforma_origen": self.plataforma,
-                        "texto_crudo": texto_crudo, 
+                        "texto_crudo": texto_crudo,
                         "titulo_puesto": titulo
                     })
-                    self.logger.info(f"📦 Extrayendo: {titulo[:40]}")
+                    self.logger.debug(f"✅ Extrayendo: {titulo[:40]}...")
                     
             except Exception as e:
-                self.logger.debug(f"Saltando oferta de LinkedIn por demora (Timeout): {e}")
+                self.logger.error(f"❌ Error extrayendo {titulo[:20]}: {e}")
                 
-        return ofertas
+        self.logger.info(f"✅ Total extraído Computrabajo: {len(ofertas_recopiladas)} ofertas")
+        return ofertas_recopiladas
