@@ -129,7 +129,7 @@ class AIExtractor:
         return "Lima"
 
     def _extraer_empresa(self, doc, texto: str) -> str:
-        # 🧠 SENTIDO COMÚN: Lista negra definitiva de falsas empresas
+        # 🧠 SENTIDO COMÚN: Agregamos las nuevas falsas empresas detectadas
         basura_empresas = {
             'login', 'ofertas', 'empleos', 'salarios', 'blog', 'linkedin', 
             'marketing', 'publicidad', 'contar', 'of lima', 'selección', 
@@ -137,7 +137,8 @@ class AIExtractor:
             'requisitos', 'únete', 'crear cv', 'volver', 'listado', 'empresa', 
             'evaluaciones', 'descripción', 'buscar', 'bumeran', 'computrabajo',
             'continue', 'brand', 'bachiller', 'egresado', 'postula', 'automotrices',
-            'google', 'jump', 'técnico titulado'
+            'google', 'jump', 'técnico titulado', 'participación', 'reporte', 
+            'estudiantes', 'ingreso', 'brandeo', 'prácticas', 'funciones'
         }
         
         if doc:
