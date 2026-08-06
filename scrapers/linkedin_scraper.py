@@ -55,15 +55,13 @@ class LinkedInScraper(BaseScraper):
                 self.logger.debug(f"Error leyendo tarjeta básica: {e}")
 
         self.logger.info(f"🔗 Se encontraron {len(enlaces_pendientes)} enlaces válidos. Iniciando extracción...")
-
         # ====================================================================
         # 2. FASE DE EXTRACCIÓN (Visitamos cada link en la MISMA pestaña)
         # ====================================================================
         for item in enlaces_pendientes:
             
-            # 🛑 AQUÍ VA EL FRENO DE EMERGENCIA
-            # Revisa cuántas ofertas llevamos ANTES de abrir la siguiente página
-            if len(ofertas_recopiladas) >= limite_ofertas:
+            # 🛑 AQUÍ VA EL FRENO DE EMERGENCIA CORREGIDO
+            if len(ofertas) >= limite_ofertas:
                 self.logger.info(f"🎯 Límite de {limite_ofertas} ofertas alcanzado. Deteniendo extracción.")
                 break
                 
@@ -71,20 +69,19 @@ class LinkedInScraper(BaseScraper):
             titulo = item["titulo"]
             
             try:
-                # 🚀 OPTIMIZACIÓN 1: "commit" corta la espera apenas llega el esqueleto de la página.
+                # 🚀 OPTIMIZACIÓN 1: "commit" corta la espera
                 self.navegar_a(href, wait_until="commit", timeout=10000)
                 
-                # 🚀 OPTIMIZACIÓN 2: Eliminamos el sleep de 1000ms. 
-                # Playwright es inteligente y usará este inner_text para esperar solo lo estrictamente necesario.
                 try:
-                    cuerpo = self.page.locator("main, section.job-description, div.offer_requirements, .job-description").first
+                    # Selectores optimizados para LinkedIn
+                    cuerpo = self.page.locator("main, section.core-section-container, div.description__text").first
                     texto_crudo = cuerpo.inner_text(timeout=2500)[:4000]
                 except:
-                    # Plan B rápido si no encuentra los selectores principales
+                    # Plan B rápido
                     texto_crudo = self.page.inner_text("body", timeout=2500)[:4000]
                 
                 if texto_crudo and len(texto_crudo) > 50:
-                    ofertas_recopiladas.append({
+                    ofertas.append({
                         "link_oferta": href,
                         "plataforma_origen": self.plataforma,
                         "texto_crudo": texto_crudo,
@@ -95,5 +92,5 @@ class LinkedInScraper(BaseScraper):
             except Exception as e:
                 self.logger.error(f"❌ Error extrayendo {titulo[:20]}: {e}")
                 
-        self.logger.info(f"✅ Total extraído Computrabajo: {len(ofertas_recopiladas)} ofertas")
-        return ofertas_recopiladas
+        self.logger.info(f"✅ Total extraído LinkedIn: {len(ofertas)} ofertas")
+        return ofertas
