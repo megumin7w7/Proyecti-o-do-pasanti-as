@@ -15,7 +15,7 @@ class TextCleaner:
             
         texto = texto_crudo
 
-        # 🧹 ELIMINACIÓN DE BASURA ESTRUCTURAL DE PLATAFORMAS (Bumeran y LinkedIn)
+        # 🧹 ELIMINACIÓN MASIVA DE BASURA DE INTERFAZ (LinkedIn, Bumeran, Computrabajo)
         patrones_basura = [
             r'Buscar empleo por puesto o palabra clave.*?Blog',
             r'El contenido de este aviso es propiedad del anunciante.*?u otro motivo\.',
@@ -24,12 +24,19 @@ class TextCleaner:
             r'Al hacer clic en «Aceptar y unirse».*?Continue with Google',
             r'Descubre a quién ha contratado.*?para este puesto',
             r'Las recomendaciones duplican tus probabilidades.*?Mira a quién conoces',
-            r'Recibe notificaciones sobre nuevos empleos.*?alerta de empleo',
+            r'Recibe notificaciones sobre.*?alerta de empleo',
+            r'Recibe una notificación cuando se publique.*?Empleos similares',
             r'Sé de los primeros \d+ solicitantes',
-            r'No especificados'
+            r'No especificados',
+            r'Show more',
+            r'Nivel de antigüedad.*?Sectores',
+            r'Actualizado hace más de \d+ días',
+            r'Hace \d+ (días|horas|semanas|meses)',
+            r'Solicitar\s+Guardar',
+            r'Detalle del empleo.*?Empleos relacionados'
         ]
 
-        # Borramos los bloques masivos usando DOTALL (para que incluya saltos de línea)
+        # Borramos los bloques masivos ignorando mayúsculas y saltos de línea
         for patron in patrones_basura:
             texto = re.sub(patron, '', texto, flags=re.IGNORECASE | re.DOTALL)
 
