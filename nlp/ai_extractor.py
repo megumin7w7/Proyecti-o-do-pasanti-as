@@ -129,28 +129,47 @@ class AIExtractor:
         return "Lima"
 
     def _extraer_empresa(self, doc, texto: str) -> str:
+        # 🧠 SENTIDO COMÚN: Lista negra de falsas empresas
+        basura_empresas = {
+            'login', 'ofertas', 'empleos', 'salarios', 'blog', 'linkedin', 
+            'marketing', 'publicidad', 'contar', 'of lima', 'selección', 
+            'beneficios', 'almuerzo', 'modalidad', 'formación', 'te invitamos', 
+            'requisitos', 'únete', 'crear cv', 'volver', 'listado', 'empresa', 
+            'evaluaciones', 'descripción', 'buscar'
+        }
+        
+        # 1. Intento con spaCy (Modelo de IA)
         if doc:
             for ent in doc.ents:
                 if ent.label_ == "ORG":
                     nombre = ent.text.strip()
-                    if len(nombre) > 3 and not any(x in nombre.lower() for x in ['login', 'ofertas', 'empleos']):
+                    # Condición: Que no sea muy largo y no contenga palabras basura
+                    if 3 < len(nombre) <= 30 and not any(x in nombre.lower() for x in basura_empresas):
                         return nombre
 
+        # 2. Intento de respaldo (Fallback leyendo líneas)
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
-        basura = {'login', 'crear cv', 'volver', 'listado', 'ofertas', 'salarios', 'empresa', 'evaluaciones', 'descripción', 'buscar'}
         for linea in lineas[:15]:
             ll = linea.lower()
-            if len(linea) > 3 and len(linea) < 60 and not any(b in ll for b in basura):
+            if 3 < len(linea) <= 30 and not any(b in ll for b in basura_empresas):
                 return linea.split('-')[0].strip()
+                
         return "Confidencial"
 
     def _extraer_titulo(self, texto: str) -> str:
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
-        basura = {'login', 'crear cv', 'volver', 'listado', 'ofertas', 'salarios', 'empresa', 'evaluaciones', 'descripción'}
+        
+        basura = {
+            'login', 'crear cv', 'volver', 'listado', 'ofertas', 'salarios', 
+            'empresa', 'evaluaciones', 'descripción', 'actualizado', 
+            'hace más de', 'blog'
+        }
+        
         for l in lineas:
             ll = l.lower()
             if not any(b in ll for b in basura) and len(l) > 8 and len(l) < 120:
                 return l
+                
         return "Practicante"
 
     def _extraer_descripcion_breve(self, texto: str) -> str:
