@@ -133,7 +133,7 @@ class AIExtractor:
     def _extraer_empresa(self, doc, texto: str) -> str:
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
 
-        # 🧠 SENTIDO COMÚN: Lista negra expansiva
+        # 🧠 SENTIDO COMÚN: Lista negra expansiva (Ahora con basura de LinkedIn)
         basura_empresas = {
             'login', 'ofertas', 'empleos', 'salarios', 'blog', 'linkedin', 
             'marketing', 'publicidad', 'contar', 'of lima', 'selección', 
@@ -145,19 +145,21 @@ class AIExtractor:
             'estudiantes', 'ingreso', 'brandeo', 'prácticas', 'funciones', 'bolsa de empleo',
             'importante empresa', 'administración', 'ing.', 'química', 'industrial',
             'ingeniería', 'confidencial', 'unidos!', 'presencial', 'remoto', 'híbrido',
-            'actualizado'
+            'actualizado', 'pasar al contenido principal', 'acerca de', 'accesibilidad',
+            'condiciones de uso', 'política de privacidad', 'política de cookies'
         }
 
         # 🎯 NUEVO CAZADOR: "Somos [Nombre de la Empresa]"
         for linea in lineas[:10]:
             if linea.lower().startswith("somos "):
-                # Extraemos lo que sigue de "Somos " hasta la primera coma o punto
                 candidato = re.split(r'[,|.]', linea)[0].replace("Somos ", "").replace("somos ", "").strip()
-                # 🚀 AUMENTAMOS EL LÍMITE A 65 CARACTERES
-                if 3 < len(candidato) <= 65 and not any(b in candidato.lower() for b in basura_empresas):
-                    return candidato
+                # 🚀 EXCEPCIÓN: ¡Aquí NO usamos la lista negra porque el scraper lo inyectó!
+                if 3 < len(candidato) <= 65:
+                    # Solo evitamos que atrape frases orgánicas como "Somos una empresa importante..."
+                    if "una empresa" not in candidato.lower() and "una importante" not in candidato.lower():
+                        return candidato
 
-        # 🎯 FRANCOTIRADOR BUMERAN (Con filtro de basura integrado)
+        # 🎯 FRANCOTIRADOR BUMERAN
         for i, linea in enumerate(lineas):
             if "seguir empresa" in linea.lower() and i >= 1:
                 empresa = lineas[i-1]
@@ -186,23 +188,23 @@ class AIExtractor:
     def _extraer_titulo(self, texto: str) -> str:
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
         
-        # 🧠 SENTIDO COMÚN: Lista negra de títulos (¡Ahora también aplica al francotirador!)
+        # 🧠 SENTIDO COMÚN: Lista negra de títulos (Ahora con basura de LinkedIn)
         basura = {
             'login', 'crear cv', 'volver', 'listado', 'ofertas', 'salarios', 
             'empresa', 'evaluaciones', 'descripción', 'actualizado', 
             'hace más de', 'blog', 'publicado', 'días', 'horas', 'bumeran',
             'computrabajo', 'postula', 'bolsa de empleo', 'presencial', 
-            'híbrido', 'remoto', 'tiempo completo', 'medio tiempo'
+            'híbrido', 'remoto', 'tiempo completo', 'medio tiempo',
+            'pasar al contenido principal', 'acerca de', 'accesibilidad',
+            'condiciones de uso', 'política de privacidad'
         }
         
-        # 🎯 FRANCOTIRADOR BUMERAN (Ahora con filtro de basura integrado)
+        # 🎯 FRANCOTIRADOR BUMERAN
         for i, linea in enumerate(lineas):
             if "seguir empresa" in linea.lower() and i >= 2:
                 candidato = lineas[i-2]
-                # Si el candidato está limpio, lo devolvemos
                 if len(candidato) > 5 and not any(b in candidato.lower() for b in basura):
                     return candidato
-                # Si el candidato era basura (ej. "Actualizado"), probamos una línea más arriba
                 elif i >= 3:
                     candidato_alt = lineas[i-3]
                     if len(candidato_alt) > 5 and not any(b in candidato_alt.lower() for b in basura):
