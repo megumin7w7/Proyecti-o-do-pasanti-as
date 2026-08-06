@@ -64,22 +64,24 @@ class AIExtractor:
                 continue
             sl = s.lower()
 
-            if any(x in sl for x in ["requisito", "perfil", "requerimiento"]):
+            # 🚀 ACTUALIZADO: Más palabras clave para detectar Requisitos
+            if any(x in sl for x in ["requisito", "perfil", "requerimiento", "qué buscamos", "que buscamos", "lo que aportarás", "buscamostutalento", "conocimientos"]):
                 estado = "requisitos"
                 continue
-            elif any(x in sl for x in ["beneficio", "ofrecemos", "te ofrecemos"]):
+            # 🚀 ACTUALIZADO: Más palabras clave para detectar Beneficios
+            elif any(x in sl for x in ["beneficio", "ofrecemos", "te ofrecemos", "valoramos tu impacto", "condiciones"]):
                 estado = "beneficios"
                 continue
-            elif any(x in sl for x in ["funciones", "responsabilidades", "actividades"]):
+            elif any(x in sl for x in ["funciones", "responsabilidades", "actividades", "reto tendrás", "generarás valor"]):
                 estado = "funciones"
                 continue
 
             if estado == "requisitos" and len(s) > 5:
-                if any(x in sl for x in ["beneficio", "ofrecemos", "funciones"]):
+                if any(x in sl for x in ["beneficio", "ofrecemos", "funciones", "condiciones"]):
                     continue
                 requisitos.append(s)
             elif estado == "beneficios" and len(s) > 5:
-                if any(x in sl for x in ["requisito", "perfil", "funciones"]):
+                if any(x in sl for x in ["requisito", "perfil", "funciones", "qué buscamos"]):
                     continue
                 beneficios.append(s)
 
