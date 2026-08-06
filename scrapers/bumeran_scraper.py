@@ -3,7 +3,7 @@ Módulo: scrapers/bumeran_scraper.py (Corregido y Estable)
 """
 from scrapers.base_scraper import BaseScraper
 from utils.url_cleaner import normalizar_termino_busqueda
-
+from utils.time_parser import calcular_dias_antiguedad
 class BumeranScraper(BaseScraper):
     def __init__(self):
         super().__init__()
@@ -56,18 +56,22 @@ class BumeranScraper(BaseScraper):
                     href = enlace.get_attribute("href")
                     texto_tarjeta = enlace.inner_text().strip()
                     
+                    # ⏳ FILTRO DE ANTIGÜEDAD AQUÍ
+                    dias = calcular_dias_antiguedad(texto_tarjeta)
+                    if dias > 45:
+                        self.logger.debug(f"⏳ Descartada por vieja ({dias} días): {href}")
+                        continue
+                    
                     # 🧹 LIMPIEZA DE TÍTULO DESDE EL SCRAPER
                     lineas_tarjeta = [l.strip() for l in texto_tarjeta.split('\n') if l.strip()]
                     titulo_limpio = puesto # fallback
                     for linea in lineas_tarjeta:
-                        # Si la línea no es una fecha ni etiqueta, asumimos que es el título real
                         if not any(b in linea.lower() for b in ['actualizado', 'hace', 'promocionado', 'nuevo', 'días', 'horas']):
                             titulo_limpio = linea
                             break
                     
                     if not href: continue
-                    if not href.startswith("http"): href = f"https://www.bumeran.com.pe{href}"
-                    
+                    if not href.startswith("http"): href = f"https://www.bumeran.com.pe{href}"                    
                     # === FILTRO DE MEMORIA COMPARTIDA ===
                     if href in urls_existentes: continue
                     if any(o['link_oferta'] == href for o in ofertas): continue
