@@ -103,14 +103,17 @@ class ComputrabajoScraper(BaseScraper):
             self.logger.error(f"❌ Error en fase de descubrimiento: {e}")
 
         self.logger.info(f"🔗 {len(enlaces_pendientes)} enlaces listos. Iniciando extracción secuencial...")
-
-        # ==========================================
-        # FASE 2: EXTRACCIÓN DE CONTENIDO (Misma pestaña)
-        # ==========================================
         # ==========================================
         # FASE 2: EXTRACCIÓN DE CONTENIDO (Ultra-rápida)
         # ==========================================
         for item in enlaces_pendientes:
+            
+            # 🛑 AQUÍ VA EL FRENO DE EMERGENCIA
+            # Revisa cuántas ofertas llevamos ANTES de abrir la siguiente página
+            if len(ofertas_recopiladas) >= limite_ofertas:
+                self.logger.info(f"🎯 Límite de {limite_ofertas} ofertas alcanzado. Deteniendo extracción.")
+                break
+                
             href = item["link"]
             titulo = item["titulo"]
             
