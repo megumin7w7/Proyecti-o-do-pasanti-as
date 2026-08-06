@@ -133,7 +133,7 @@ class AIExtractor:
     def _extraer_empresa(self, doc, texto: str) -> str:
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
 
-        # 🧠 SENTIDO COMÚN: Lista negra expansiva (Bloqueando "importante empresa", "ing.", etc.)
+        # 🧠 SENTIDO COMÚN: Lista negra expansiva
         basura_empresas = {
             'login', 'ofertas', 'empleos', 'salarios', 'blog', 'linkedin', 
             'marketing', 'publicidad', 'contar', 'of lima', 'selección', 
@@ -149,9 +149,8 @@ class AIExtractor:
         }
 
         # 🎯 NUEVO CAZADOR: "Somos [Nombre de la Empresa]"
-        for linea in lineas[:10]: # Buscamos solo en los primeros párrafos
+        for linea in lineas[:10]:
             if linea.lower().startswith("somos "):
-                import re
                 # Extraemos lo que sigue de "Somos " hasta la primera coma o punto
                 candidato = re.split(r'[,|.]', linea)[0].replace("Somos ", "").replace("somos ", "").strip()
                 if 3 < len(candidato) <= 40 and not any(b in candidato.lower() for b in basura_empresas):
