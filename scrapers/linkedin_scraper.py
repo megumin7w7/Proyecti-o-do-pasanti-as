@@ -1,3 +1,7 @@
+"""
+Módulo: scrapers/linkedin_scraper.py
+"""
+import re
 from scrapers.base_scraper import BaseScraper
 from utils.url_cleaner import normalizar_termino_busqueda
 
@@ -60,7 +64,6 @@ class LinkedInScraper(BaseScraper):
         # ====================================================================
         for item in enlaces_pendientes:
             
-            # 🛑 AQUÍ VA EL FRENO DE EMERGENCIA CORREGIDO
             if len(ofertas) >= limite_ofertas:
                 self.logger.info(f"🎯 Límite de {limite_ofertas} ofertas alcanzado. Deteniendo extracción.")
                 break
@@ -69,17 +72,37 @@ class LinkedInScraper(BaseScraper):
             titulo = item["titulo"]
             
             try:
-                # 🚀 OPTIMIZACIÓN 1: "commit" corta la espera
-                self.navegar_a(href, wait_until="commit", timeout=10000)
+                # 🛠️ CORRECCIÓN 1: Volvemos a usar domcontentloaded para darle tiempo a LinkedIn
+                self.navegar_a(href, wait_until="domcontentloaded", timeout=10000)
                 
+                # Intentamos cerrar el molesto banner de authwall si aparece
                 try:
-                    # Selectores optimizados para LinkedIn
-                    cuerpo = self.page.locator("main, section.core-section-container, div.description__text").first
-                    texto_crudo = cuerpo.inner_text(timeout=2500)[:4000]
+                    self.page.evaluate("""
+                        document.querySelectorAll('button.modal__dismiss, button[aria-label="Dismiss"]').forEach(b => b.click());
+                    """)
                 except:
-                    # Plan B rápido
+                    pass
+
+                try:
+                    # 🛠️ CORRECCIÓN 2: Selectores exactos y 5 segundos de espera
+                    cuerpo = self.page.locator("div.show-more-less-html__markup, div.description__text, section.core-section-container").first
+                    cuerpo.wait_for(state="visible", timeout=5000)
+                    texto_crudo = cuerpo.inner_text()[:4000]
+                except:
+                    self.page.wait_for_timeout(2000)
                     texto_crudo = self.page.inner_text("body", timeout=2500)[:4000]
                 
+                # 🥷 TRUCO NINJA: Rescatar la empresa desde la URL
+                empresa_ninja = ""
+                match = re.search(r'-at-(.*?)-\d+$', href)
+                if match:
+                    # Quitamos guiones y capitalizamos (ej: cartavio-rum-company-s-a-c -> Cartavio Rum Company S A C)
+                    empresa_ninja = match.group(1).replace('-', ' ').title()
+                
+                # Inyectamos el salvavidas al inicio del texto crudo
+                if empresa_ninja:
+                    texto_crudo = f"Somos {empresa_ninja}.\n\n" + (texto_crudo if texto_crudo else "")
+
                 if texto_crudo and len(texto_crudo) > 50:
                     ofertas.append({
                         "link_oferta": href,
