@@ -1,156 +1,224 @@
 """
-Módulo: scrapers/computrabajo_scraper.py (Migrado a Playwright)
+Módulo: scrapers/indeed_scraper.py (Playwright Async)
 """
+import asyncio
+import random
 import time
-from scrapers.base_scraper import BaseScraper
+import urllib.parse
+from typing import List, Optional, Callable
 from loguru import logger
-from utils.time_parser import calcular_dias_antiguedad
-
-class ComputrabajoScraper(BaseScraper):
-    """Scraper específico para Computrabajo usando Playwright"""
+from playwright.async_api import async_playwright, Page, Browser, BrowserContext
+from playwright_stealth import stealth_async
+class IndeedScraperPlaywright:
+    """Scraper de Indeed Perú usando Playwright + stealth"""
     def __init__(self):
-        super().__init__()
-        self.plataforma = "Computrabajo"
-        logger.info("✅ ComputrabajoScraper (Playwright) inicializado")
+        self.plataforma = "Indeed"
+        self.browser: Optional[Browser] = None
+        self.context: Optional[BrowserContext] = None
+        self.page: Optional[Page] = None
+        logger.info("✅ IndeedScraperPlaywright inicializado")
 
-    def _eliminar_obstaculos(self):
-        """Cierra modales y cookies con JavaScript."""
-        try:
-            self.page.evaluate("""
-                document.querySelectorAll('[class*="modal"], [id*="cookie"], button[class*="close"]').forEach(e => {
-                    if (e.offsetParent !== null) e.click();
-                });
-            """)
-            logger.debug("🛡️ Modales eliminados")
-        except Exception:
-            pass
+    async def iniciar_navegador(self, headless: bool = True):
+        """Lanza Chromium usando Playwright con Stealth Asíncrono."""
+        logger.info("🚀 Iniciando Chromium con Playwright...")
+        playwright = await async_playwright().start()
+        
+        self.browser = await playwright.chromium.launch(
+            headless=headless, # Si sigue fallando, cambia a headless=False temporalmente
+            args=[
+                '--disable-blink-features=AutomationControlled',
+                '--no-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu'
+            ]
+        )
+        
+        self.context = await self.browser.new_context(
+            viewport={'width': 1920, 'height': 1080},
+            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            locale='es-PE'
+        )
+        
+        self.page = await self.context.new_page()
+        
+        # 💡 INYECCIÓN CRÍTICA DE STEALTH ASÍNCRONO
+        await stealth_async(self.page)
+        
+        logger.success("✅ Navegador Playwright listo con Evasión Anti-Bot")
 
-    def recolectar_ofertas(self, url_semilla: str = "", limite_ofertas: int = 20, 
-                          puesto: str = None, lugar: str = None, filtro_relevancia_cb=None,
-                          urls_existentes: set = None) -> list:
-        """Pipeline dividido: 1. Descubrimiento de URLs -> 2. Extracción secuencial."""
+    async def _pausa_humana(self, min_seg: float = 1.5, max_seg: float = 3.5):
+        await asyncio.sleep(random.uniform(min_seg, max_seg))
+
+    async def recolectar_ofertas(
+        self,
+        puesto: str = "analista de datos",
+        lugar: str = "lima",
+        limite_ofertas: Optional[int] = None,
+        filtro_relevancia_cb: Optional[Callable] = None,
+        urls_existentes: set = None
+    ) -> List[dict]:
+        if urls_existentes is None: urls_existentes = set()
         if not self.page:
-            self.iniciar_navegador(headless=False)
+            await self.iniciar_navegador(headless=True)
             
-        if urls_existentes is None: 
-            urls_existentes = set()
-            
-        ofertas_recopiladas = []
-        enlaces_pendientes = []
-        pagina_actual = 1
-        MAX_PAGINAS = 30
+        ofertas = []
+        puesto_q = urllib.parse.quote(puesto)
+        lugar_q = urllib.parse.quote(lugar)
+        url = f"https://pe.indeed.com/jobs?q={puesto_q}&l={lugar_q}"
         
-        puesto_query = puesto.lower().replace(" ", "-") if puesto else ""
-        lugar_query = lugar.lower().replace(" ", "-") if lugar else ""
+        logger.info(f"🚀 Navegando a: {url}")
+        await self.page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        await self._pausa_humana(3.0, 5.0)
         
-        if puesto_query and lugar_query:
-            url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}-en-{lugar_query}"
-        elif puesto_query:
-            url_base = f"https://pe.computrabajo.com/trabajo-de-{puesto_query}"
-        else:
-            url_base = url_semilla.rstrip('/')
-            
-        # ==========================================
-        # FASE 1: DESCUBRIMIENTO DE ENLACES
-        # ==========================================
         try:
-            while pagina_actual <= MAX_PAGINAS and len(enlaces_pendientes) < limite_ofertas:
-                url_pagina = f"{url_base}?p={pagina_actual}"
-                self.logger.info(f"📄 Explorando Página {pagina_actual}: {url_pagina}")
-                self.navegar_a(url_pagina)
-                time.sleep(2)
-                self._eliminar_obstaculos()
-                
-                ofertas_locator = self.obtener_elementos("a.js-o-link")
-                count = ofertas_locator.count()
-                
-                if count == 0:
-                    self.logger.warning(f"🏁 No hay más ofertas en página {pagina_actual}")
+            await self.page.wait_for_selector("div.job_seen_beacon, div.jobsearch-ResultsList, div[data-jk]", timeout=15000)
+            logger.success("✅ Tarjetas detectadas")
+        except Exception:
+            logger.warning("️ No se detectaron tarjetas rápidamente")
+        
+        pagina = 1
+        modo_ilimitado = limite_ofertas is None or limite_ofertas <= 0
+        
+        while modo_ilimitado or len(ofertas) < limite_ofertas:
+            selectores_tarjeta = [
+                "div.job_seen_beacon", "div[data-jk]", "li.css-5lfssg", 
+                "div.jobsearch-ResultsList > div", "div.slider_container"
+            ]
+            
+            tarjetas = []
+            for sel in selectores_tarjeta:
+                tarjetas = await self.page.locator(sel).all()
+                if tarjetas:
+                    logger.info(f" Página {pagina}: {len(tarjetas)} tarjetas")
+                    break
+            
+            if not tarjetas:
+                logger.info("🏁 No hay más ofertas")
+                break
+            
+            for idx, tarjeta in enumerate(tarjetas, 1):
+                if not modo_ilimitado and len(ofertas) >= limite_ofertas:
                     break
                 
-                for i in range(count):
-                    if len(enlaces_pendientes) >= limite_ofertas: 
-                        break
+                try:
+                    data_jk = await tarjeta.get_attribute("data-jk")
+                    if not data_jk:
+                        try:
+                            link = tarjeta.locator("a[data-jk], a[href*='jk=']").first
+                            href = await link.get_attribute("href")
+                            if href and "jk=" in href:
+                                data_jk = href.split("jk=")[-1].split("&")[0]
+                        except:
+                            continue
+                    
+                    if not data_jk:
+                        continue
+                    
+                    link_oferta = f"https://pe.indeed.com/viewjob?jk={data_jk}"
+                    
+                    # === FILTRO DE MEMORIA COMPARTIDA ===
+                    if link_oferta in urls_existentes: continue
+                    if any(o["link_oferta"] == link_oferta for o in ofertas): continue
+                    
+                    # Inmediatamente lo guardamos
+                    urls_existentes.add(link_oferta)
                     
                     try:
-                        elem = ofertas_locator.nth(i)
-                        href = elem.get_attribute("href")
-                        titulo = elem.inner_text().strip()
-                        
-                        # 🚀 TRUCO: Subimos al 'article' padre para leer la fecha de la tarjeta completa
-                        texto_tarjeta = elem.evaluate("el => el.closest('article') ? el.closest('article').innerText : el.innerText")
-                        
-                        # ⏳ FILTRO DE ANTIGÜEDAD AQUÍ
-                        dias = calcular_dias_antiguedad(texto_tarjeta)
-                        if dias > 45:
-                            self.logger.debug(f"⏳ Descartada por vieja ({dias} días): {href}")
+                        await tarjeta.scroll_into_view_if_needed(timeout=4000)
+                    except:
+                        pass
+                    
+                    await self._pausa_humana(0.4, 0.8)
+                    
+                    try:
+                        await tarjeta.click(timeout=3000)
+                    except:
+                        try:
+                            await tarjeta.locator("a").first.click(timeout=2500)
+                        except:
                             continue
-                        
-                        if not href or not titulo: 
+                    
+                    await self._pausa_humana(1.5, 2.5)
+                    
+                    # === EXTRACCIÓN DE DESCRIPCIÓN ===
+                    texto_crudo = ""
+                    selectores_desc = [
+                        "#jobDescriptionText", ".jobsearch-JobComponent-description",
+                        "div.jobsearch-jobDescriptionText", "div[id*='jobDescription']"
+                    ]
+                    
+                    for sel in selectores_desc:
+                        try:
+                            elem = self.page.locator(sel).first
+                            if await elem.count() > 0:
+                                texto = await elem.inner_text(timeout=4000)
+                                if texto and len(texto.strip()) > 80:
+                                    texto_crudo = texto.strip()[:2000]  # ✅ LIMITADO
+                                    break
+                        except:
                             continue
-                            
-                        if not href.startswith("http"): 
-                            href = f"https://pe.computrabajo.com{href}"
-                        
-                        # === FILTRO DE MEMORIA COMPARTIDA ===
-                        if href in urls_existentes: 
-                            continue
-                        
-                        if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto): 
-                            continue
-                            
-                        if not any(e["link"] == href for e in enlaces_pendientes):
-                            enlaces_pendientes.append({"link": href, "titulo": titulo})
-                            urls_existentes.add(href) # Agregamos al Set global
-                            
-                    except Exception as e:
-                        self.logger.debug(f"Error evaluando nodo de enlace: {e}")
+                    
+                    if not texto_crudo:
                         continue
-                        
-                pagina_actual += 1
-                
-        except Exception as e:
-            self.logger.error(f"❌ Error en fase de descubrimiento: {e}")
-
-        self.logger.info(f"🔗 {len(enlaces_pendientes)} enlaces listos. Iniciando extracción secuencial...")
-        # ==========================================
-        # FASE 2: EXTRACCIÓN DE CONTENIDO (Ultra-rápida)
-        # ==========================================
-        for item in enlaces_pendientes:
-            
-            # 🛑 AQUÍ VA EL FRENO DE EMERGENCIA
-            # Revisa cuántas ofertas llevamos ANTES de abrir la siguiente página
-            if len(ofertas_recopiladas) >= limite_ofertas:
-                self.logger.info(f"🎯 Límite de {limite_ofertas} ofertas alcanzado. Deteniendo extracción.")
-                break
-                
-            href = item["link"]
-            titulo = item["titulo"]
-            
-            try:
-                # 🚀 OPTIMIZACIÓN 1: "commit" corta la espera apenas llega el esqueleto de la página.
-                self.navegar_a(href, wait_until="commit", timeout=10000)
-                
-                # 🚀 OPTIMIZACIÓN 2: Eliminamos el sleep de 1000ms. 
-                # Playwright es inteligente y usará este inner_text para esperar solo lo estrictamente necesario.
-                try:
-                    cuerpo = self.page.locator("main, section.job-description, div.offer_requirements, .job-description").first
-                    texto_crudo = cuerpo.inner_text(timeout=2500)[:4000]
-                except:
-                    # Plan B rápido si no encuentra los selectores principales
-                    texto_crudo = self.page.inner_text("body", timeout=2500)[:4000]
-                
-                if texto_crudo and len(texto_crudo) > 50:
-                    ofertas_recopiladas.append({
-                        "link_oferta": href,
+                    
+                    titulo = puesto
+                    try:
+                        titulo_elem = self.page.locator("h2[data-testid='jobsearch-JobInfoHeader-title'], h1.jobsearch-JobInfoHeader-title, h2.jobTitle").first
+                        titulo = (await titulo_elem.inner_text(timeout=2500)).strip()
+                    except:
+                        pass
+                    
+                    if filtro_relevancia_cb and not filtro_relevancia_cb(titulo, puesto):
+                        continue
+                    
+                    ofertas.append({
+                        "link_oferta": link_oferta,
                         "plataforma_origen": self.plataforma,
                         "texto_crudo": texto_crudo,
                         "titulo_puesto": titulo
                     })
-                    self.logger.debug(f"✅ Extrayendo: {titulo[:40]}...")
+                    logger.info(f"📦 [{len(ofertas)}] {titulo[:55]}...")
                     
-            except Exception as e:
-                self.logger.error(f"❌ Error extrayendo {titulo[:20]}: {e}")
+                except Exception as e:
+                    logger.debug(f"Error tarjeta {idx}: {e}")
+                    continue
+            
+            # Paginación
+            try:
+                logger.info(f"➡️ Intentando página {pagina + 1}...")
+                await self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                pausa = random.uniform(5.0, 8.0) if pagina < 4 else random.uniform(10.0, 18.0)
+                await asyncio.sleep(pausa)
                 
-        self.logger.info(f"✅ Total extraído Computrabajo: {len(ofertas_recopiladas)} ofertas")
-        return ofertas_recopiladas
+                next_btn = self.page.locator("a[data-testid='pagination-page-next'], a[aria-label*='Next'], a[aria-label*='Siguiente']")
+                if await next_btn.count() == 0 or await next_btn.get_attribute("aria-disabled") == "true":
+                    logger.info("🏁 Última página")
+                    break
+                
+                await next_btn.click()
+                pagina += 1
+                await self._pausa_humana(3.5, 5.5)
+                
+            except Exception as e:
+                logger.info(f"🏁 Fin de paginación: {e}")
+                break
+        
+        logger.info(f" Total extraído Indeed: {len(ofertas)} ofertas")
+        return ofertas
+
+    def recolectar_ofertas_sync(self, **kwargs):
+        """Versión síncrona para usar desde main.py"""
+        return asyncio.run(self.recolectar_ofertas(**kwargs))
+
+    async def cerrar(self):
+        if self.browser:
+            await self.browser.close()
+            logger.info("🔒 Navegador Playwright cerrado")
+
+    def cerrar_navegador(self):
+        """Compatible con main.py síncrono"""
+        if self.browser:
+            try:
+                asyncio.run(self.cerrar())
+            except:
+                pass
