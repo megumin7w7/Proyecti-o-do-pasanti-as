@@ -249,9 +249,9 @@ if __name__ == "__main__":
     
     resultados = ejecutar_pipeline(
         limites_por_portal=limites_dinamicos,
-        usar_bumeran=True, 
-        usar_computrabajo=True, 
-        usar_linkedin=True,
+        usar_bumeran=False, 
+        usar_computrabajo=False, 
+        usar_linkedin=False,
         usar_indeed=True, 
         usar_nlp=True
     )
