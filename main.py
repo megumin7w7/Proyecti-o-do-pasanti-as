@@ -248,7 +248,7 @@ if __name__ == "__main__":
         usar_bumeran=True, 
         usar_computrabajo=True, 
         usar_linkedin=True,
-        usar_indeed=False, 
+        usar_indeed=True, 
         usar_nlp=True
     )
     
