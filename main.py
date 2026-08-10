@@ -151,12 +151,16 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
             es_asincrono = asyncio.iscoroutinefunction(scraper.iniciar_navegador)
             loop = None
             
+            modo_oculto = False if nombre_portal == "Indeed" else True
+            
             if es_asincrono:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                loop.run_until_complete(scraper.iniciar_navegador(headless=True))
+                # Inyectamos nuestra variable modo_oculto
+                loop.run_until_complete(scraper.iniciar_navegador(headless=modo_oculto))
             else:
-                scraper.iniciar_navegador(headless=True)
+                # Inyectamos nuestra variable modo_oculto
+                scraper.iniciar_navegador(headless=modo_oculto)
             
             try:
                 for busqueda in busquedas_a_ejecutar:
