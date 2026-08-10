@@ -74,7 +74,18 @@ class IndeedScraperPlaywright:
             await self.page.wait_for_selector("div.job_seen_beacon, div.jobsearch-ResultsList, div[data-jk]", timeout=15000)
             logger.success("✅ Tarjetas detectadas")
         except Exception:
-            logger.warning("️ No se detectaron tarjetas rápidamente")
+            logger.warning("⚠️ No se detectaron tarjetas rápidamente")
+            
+            # === 📸 INYECCIÓN DE DEPURACIÓN (TOMA FOTO SI FALLA) ===
+            try:
+                await self.page.screenshot(path=f"error_indeed.png")
+                html = await self.page.content()
+                with open(f"error_indeed.html", "w", encoding="utf-8") as f:
+                    f.write(html)
+                logger.info("📸 Captura de pantalla guardada en artifacts para depuración")
+            except Exception as e:
+                logger.error(f"No se pudo tomar la captura: {e}")
+            # =======================================================
         
         pagina = 1
         modo_ilimitado = limite_ofertas is None or limite_ofertas <= 0
