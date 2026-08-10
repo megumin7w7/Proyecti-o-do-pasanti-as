@@ -215,10 +215,9 @@ class IndeedScraperPlaywright:
             await self.browser.close()
             logger.info("🔒 Navegador Playwright cerrado")
 
-    def cerrar_navegador(self):
-        """Compatible con main.py síncrono"""
+    # ELIMINA la función cerrar() y reemplaza cerrar_navegador() con esto:
+    async def cerrar_navegador(self):
+        """Cierra el navegador de forma asíncrona (Compatible con main.py)"""
         if self.browser:
-            try:
-                asyncio.run(self.cerrar())
-            except:
-                pass
+            await self.browser.close()
+            logger.info("🔒 Navegador Playwright de Indeed cerrado")
