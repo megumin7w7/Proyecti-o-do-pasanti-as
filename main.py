@@ -128,10 +128,6 @@ def ejecutar_pipeline(limites_por_portal: dict = None, usar_bumeran: bool = True
     if not portales:
         return {'success': False, 'error': 'No hay portales activados', 'total_ofertas': 0}
 
-    # === NUEVA LÓGICA: MEMORIA COMPARTIDA ===
-    # Creamos el Set de URLs históricas una sola vez al inicio
-    # === NUEVA LÓGICA: MEMORIA COMPARTIDA ===
-    # Creamos el Set de URLs históricas una sola vez al inicio
     try:
         urls_globales = storage.obtener_urls_cacheadas()
     except AttributeError:
