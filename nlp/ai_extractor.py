@@ -146,7 +146,8 @@ class AIExtractor:
             'importante empresa', 'administración', 'ing.', 'química', 'industrial',
             'ingeniería', 'confidencial', 'unidos!', 'presencial', 'remoto', 'híbrido',
             'actualizado', 'pasar al contenido principal', 'acerca de', 'accesibilidad',
-            'condiciones de uso', 'política de privacidad', 'política de cookies'
+            'condiciones de uso', 'política de privacidad', 'política de cookies','alta revisión de perfiles',
+            'publicado ayer','lead nurturing','bad request'
         }
 
         # 🎯 NUEVO CAZADOR: "Somos [Nombre de la Empresa]"
@@ -196,7 +197,8 @@ class AIExtractor:
             'computrabajo', 'postula', 'bolsa de empleo', 'presencial', 
             'híbrido', 'remoto', 'tiempo completo', 'medio tiempo',
             'pasar al contenido principal', 'acerca de', 'accesibilidad',
-            'condiciones de uso', 'política de privacidad'
+            'condiciones de uso', 'política de privacidad','alta revisión de perfiles',
+            'publicado ayer','lead nurturing','bad request'
         }
         
         # 🎯 FRANCOTIRADOR BUMERAN
