@@ -34,6 +34,13 @@ class TextCleaner:
             r'Hace \d+ (días|horas|semanas|meses)',
             r'Solicitar\s+Guardar',
             r'Detalle del empleo.*?Empleos relacionados'
+            r'Alta revisión de perfiles',
+            r'Publicado ayer',
+            r'lead nurturing',
+            r'Bad Request - Request Too Long'
+            r'Buscar empleo por puesto o palabra clave.*?Blog',
+            r'El contenido de este aviso es propiedad del anunciante.*?u otro motivo\.',
+            r'¡[Dd]escarga la app en tu celular!.*?© [Cc]opyright \d{4}-\d{4} [Jj]obint',
         ]
 
         # Borramos los bloques masivos ignorando mayúsculas y saltos de línea
