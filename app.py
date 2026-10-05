@@ -1,5 +1,8 @@
 """
-Módulo: app.py (Dashboard Visual Estable con gestión de búsquedas y visualización)
+Módulo: app.py (Dashboard Visual Estable)
+- Config de búsquedas: Google Sheets (Config_Busquedas)
+- Resultados: artifact Excel de GitHub Actions
+- Descarga: Excel generado al vuelo en Streamlit
 Desplegado en: Streamlit Community Cloud
 """
 import streamlit as st
@@ -9,49 +12,71 @@ from google.oauth2.service_account import Credentials
 import os
 import requests
 import json
+import io
+import zipfile
+from datetime import datetime
 
-# Configuración de la página
 st.set_page_config(page_title="Laboral AI Dashboard", page_icon="📊", layout="wide")
 
 st.title("📊 Dashboard de Ofertas Laborales")
-st.markdown("Pipeline automatizado: GitHub Actions hace el trabajo pesado, este dashboard muestra los resultados.")
+st.markdown(
+    "Pipeline automatizado: GitHub Actions scrapea y genera el Excel; "
+    "este dashboard configura búsquedas y permite descargar los resultados."
+)
+
+REPO_OWNER = "megumin7w7"
+REPO_NAME = "Proyecti-o-do-pasanti-as"
+ARTIFACT_NAME = "ofertas-excel"
+WORKFLOW_FILE = "scraper.yml"  # nombre del archivo en .github/workflows/
+
 
 # ==============================================================================
-# 1. FUNCIÓN CENTRALIZADA DE AUTENTICACIÓN (Evita errores 403)
+# 1. AUTENTICACIÓN GOOGLE SHEETS (solo config de búsquedas)
 # ==============================================================================
 @st.cache_resource
 def get_sheets_client():
-    """Obtiene un cliente de Google Sheets con permisos completos para leer y escribir."""
     try:
         creds_json = st.secrets.get("GOOGLE_CREDENTIALS_JSON")
         if not creds_json:
             return None
         creds_dict = json.loads(creds_json)
-        # Usamos el scope completo para evitar conflictos entre lectura y escritura
-        creds = Credentials.from_service_account_info(creds_dict, scopes=[
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ])
+        creds = Credentials.from_service_account_info(
+            creds_dict,
+            scopes=[
+                "https://www.googleapis.com/auth/spreadsheets",
+                "https://www.googleapis.com/auth/drive",
+            ],
+        )
         return gspread.authorize(creds)
     except Exception as e:
         st.sidebar.error(f"Error de autenticación: {e}")
         return None
 
+
+def _github_headers():
+    token = st.secrets.get("GITHUB_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if not token:
+        return None
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+
 # ==============================================================================
-# 2. GESTIÓN DE BÚSQUEDAS Y CONTROL DEL PIPELINE
+# 2. SIDEBAR: BÚSQUEDAS + DISPARO DE ACTIONS
 # ==============================================================================
 st.sidebar.header("⚙️ Control del Pipeline")
 
-# Sección para agregar nuevas búsquedas
 with st.sidebar.expander("➕ Agregar Nueva Búsqueda", expanded=False):
     st.write("Agrega puestos y ubicaciones para buscar")
-    
     col1, col2 = st.columns(2)
     with col1:
         nuevo_puesto = st.text_input("Puesto", placeholder="Ej: Practicante marketing")
     with col2:
         nuevo_lugar = st.text_input("Ubicación", placeholder="Ej: Lima", value="Lima")
-    
+
     if st.button("Agregar Búsqueda", type="primary", use_container_width=True):
         if nuevo_puesto and nuevo_lugar:
             client = get_sheets_client()
@@ -63,15 +88,15 @@ with st.sidebar.expander("➕ Agregar Nueva Búsqueda", expanded=False):
                     except gspread.WorksheetNotFound:
                         config_sheet = sheet.add_worksheet(title="Config_Busquedas", rows="100", cols="4")
                         config_sheet.append_row(["Puesto", "Lugar", "Activo", "Ultima_Ejecucion"])
-                    
-                    # Agregar nueva búsqueda marcada como "SI"
+
                     config_sheet.append_row([nuevo_puesto.strip(), nuevo_lugar.strip(), "SI", "-"])
                     st.success(f"✅ Búsqueda agregada: '{nuevo_puesto}' en '{nuevo_lugar}'")
                     st.rerun()
                 except Exception as e:
                     st.error(f"❌ Error al agregar: {e}")
+            else:
+                st.error("No hay conexión a Google Sheets.")
 
-# Sección para ver/eliminar búsquedas existentes
 with st.sidebar.expander("📋 Búsquedas Activas", expanded=True):
     client = get_sheets_client()
     if client:
@@ -80,28 +105,25 @@ with st.sidebar.expander("📋 Búsquedas Activas", expanded=True):
             try:
                 config_sheet = sheet.worksheet("Config_Busquedas")
                 busquedas_data = config_sheet.get_all_records()
-                
+
                 if busquedas_data:
                     busquedas_df = pd.DataFrame(busquedas_data)
-                    
-                    if 'Puesto' in busquedas_df.columns:
-                        # Comprobar si hay alguna búsqueda activa
-                        if not (busquedas_df['Activo'].astype(str).str.upper() == 'SI').any():
+                    if "Puesto" in busquedas_df.columns:
+                        activas = busquedas_df[
+                            busquedas_df["Activo"].astype(str).str.upper().str.strip() == "SI"
+                        ]
+                        if activas.empty:
                             st.info("No hay búsquedas activas configuradas.")
                         else:
-                            # Iteramos sobre todo el dataframe para mantener el índice original
                             for idx, row in busquedas_df.iterrows():
-                                if str(row.get('Activo', '')).strip().upper() == 'SI':
+                                if str(row.get("Activo", "")).strip().upper() == "SI":
                                     col_a, col_b = st.columns([4, 1])
                                     with col_a:
                                         st.text(f"📍 {row['Puesto']} - {row['Lugar']}")
                                     with col_b:
-                                        # Botón para eliminar mapeado al índice único
                                         if st.button("🗑️", key=f"del_{idx}"):
                                             try:
-                                                # Cálculo exacto de la fila en Google Sheets: 
-                                                # idx (base 0) + 1 (por empezar en fila 1) + 1 (por el encabezado) = idx + 2
-                                                fila_sheet = idx + 2 
+                                                fila_sheet = idx + 2
                                                 config_sheet.update_cell(fila_sheet, 3, "NO")
                                                 st.success("✅ Eliminada")
                                                 st.rerun()
@@ -118,194 +140,248 @@ with st.sidebar.expander("📋 Búsquedas Activas", expanded=True):
     else:
         st.sidebar.error("No se pudo conectar a Google Sheets. Verifica tus secretos.")
 
-# Botón para ejecutar scraping
 if st.sidebar.button("🚀 Ejecutar Scraping en Segundo Plano", type="primary", use_container_width=True):
     with st.spinner("Enviando orden a GitHub Actions..."):
-        # Intenta obtener el token de secrets primero, si no, de os.environ
         github_token = st.secrets.get("GITHUB_TOKEN", os.environ.get("GITHUB_TOKEN"))
-        repo_owner = "megumin7w7"  # ⚠️ CAMBIA ESTO por tu usuario real de GitHub
-        repo_name = "Proyecti-o-do-pasanti-as"  # ⚠️ CAMBIA ESTO por tu repositorio real
-        
-        url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/actions/workflows/scraper.yml/dispatches"
-        headers = {
-            "Authorization": f"token {github_token}",
-            "Accept": "application/vnd.github.v3+json"
-        }
-        data = {"ref": "main"}
-        
-        response = requests.post(url, headers=headers, json=data)
-        
-        if response.status_code == 204:
-            st.success("✅ ¡Orden enviada! GitHub Actions está procesando. Recarga en unos minutos.")
+        if not github_token:
+            st.error("❌ Falta GITHUB_TOKEN en secrets de Streamlit.")
         else:
-            st.error(f"❌ Error: {response.status_code} - {response.text}")
+            url = (
+                f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
+                f"/actions/workflows/{WORKFLOW_FILE}/dispatches"
+            )
+            headers = {
+                "Authorization": f"Bearer {github_token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            }
+            response = requests.post(url, headers=headers, json={"ref": "main"}, timeout=30)
+
+            if response.status_code == 204:
+                st.success("✅ ¡Orden enviada! Cuando termine el workflow, pulsa Actualizar resultados.")
+            else:
+                st.error(f"❌ Error: {response.status_code} - {response.text}")
 
 st.sidebar.markdown("---")
-st.sidebar.info("💡 **Nota:** Las búsquedas se guardan automáticamente en tu Google Sheet (pestaña Config_Busquedas)")
+st.sidebar.info(
+    "💡 Las búsquedas viven en Google Sheets (Config_Busquedas). "
+    "Los resultados salen del Excel de la última corrida de Actions."
+)
+
 
 # ==============================================================================
-# 3. CARGA DE DATOS DESDE GOOGLE SHEETS
+# 3. CARGA DESDE ARTIFACT DE GITHUB ACTIONS
 # ==============================================================================
-# ==============================================================================
-# 3. CARGA DE DATOS DESDE GOOGLE SHEETS (OPTIMIZADA)
-# ==============================================================================
-@st.cache_data(ttl=300)
-def cargar_datos(limite_filas=2000):
-    """Carga solo las ofertas más recientes para evitar OOM (Out of Memory) en Streamlit."""
+@st.cache_data(ttl=120)
+def cargar_ofertas_desde_artifact():
+    """
+    Descarga el artifact 'ofertas-excel' de la última run exitosa
+    y devuelve (DataFrame, bytes_xlsx_original | None).
+    """
+    headers = _github_headers()
+    if not headers:
+        return pd.DataFrame(), None, "Falta GITHUB_TOKEN en secrets."
+
     try:
-        client = get_sheets_client()
-        if not client:
-            st.error("⚠️ No se encontró cliente válido para Google Sheets.")
-            return pd.DataFrame()
-            
-        sheet = client.open("Laboral_AI_Scraper_Data")
-        worksheet = sheet.worksheet("Ofertas_Extraidas")
-        
-        # Determinar total de filas reales basándose en la columna ID (A)
-        total_filas = len(worksheet.col_values(1))
-        if total_filas <= 1:
-            return pd.DataFrame()
-        
-        # Paginar: calcular el rango de las últimas 'limite_filas'
-        fila_inicio = max(2, total_filas - limite_filas + 1)
-        
-        headers = worksheet.row_values(1)
-        
-        # Calcular dinámicamente la letra de la última columna (Funciona hasta la Z)
-        letra_final = chr(64 + len(headers))
-        rango_datos = f"A{fila_inicio}:{letra_final}{total_filas}" 
-        data = worksheet.get(rango_datos)
-        
-        largo_esperado = len(headers)
-        for fila in data:
-            if len(fila) < largo_esperado:
-                # Agrega espacios vacíos hasta igualar a los encabezados
-                fila.extend([''] * (largo_esperado - len(fila)))
-                
-        return pd.DataFrame(data, columns=headers)
-        
-    except gspread.SpreadsheetNotFound:
-        st.error("❌ No se encontró la hoja 'Laboral_AI_Scraper_Data'. Verifica el nombre exacto.")
-        return pd.DataFrame()
+        runs_url = (
+            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/actions/runs"
+            f"?status=success&per_page=15"
+        )
+        r = requests.get(runs_url, headers=headers, timeout=30)
+        r.raise_for_status()
+        runs = r.json().get("workflow_runs", [])
+        if not runs:
+            return pd.DataFrame(), None, "No hay workflow runs exitosos todavía."
+
+        run_id = None
+        for run in runs:
+            path = (run.get("path") or "").lower()
+            name = (run.get("name") or "").lower()
+            if "scraper" in path or "scraper" in name or "scraping" in name:
+                run_id = run["id"]
+                break
+        if run_id is None:
+            run_id = runs[0]["id"]
+
+        art_url = (
+            f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
+            f"/actions/runs/{run_id}/artifacts"
+        )
+        r = requests.get(art_url, headers=headers, timeout=30)
+        r.raise_for_status()
+        artifacts = r.json().get("artifacts", [])
+        art = next(
+            (a for a in artifacts if a.get("name") == ARTIFACT_NAME and not a.get("expired")),
+            None,
+        )
+        if not art:
+            return (
+                pd.DataFrame(),
+                None,
+                f"No se encontró artifact '{ARTIFACT_NAME}' en la run {run_id}. "
+                "¿Ya corrió el pipeline con el paso de upload-artifact?",
+            )
+
+        dl = requests.get(art["archive_download_url"], headers=headers, timeout=120)
+        dl.raise_for_status()
+
+        xlsx_bytes = None
+        with zipfile.ZipFile(io.BytesIO(dl.content)) as zf:
+            names = zf.namelist()
+            target = next((n for n in names if n.endswith("ofertas_latest.xlsx")), None)
+            if not target:
+                target = next((n for n in names if n.lower().endswith(".xlsx")), None)
+            if target:
+                xlsx_bytes = zf.read(target)
+
+        if not xlsx_bytes:
+            return pd.DataFrame(), None, "El artifact no contenía un archivo .xlsx."
+
+        df = pd.read_excel(io.BytesIO(xlsx_bytes), engine="openpyxl")
+        return df, xlsx_bytes, None
+
     except Exception as e:
-        st.error(f"❌ Error conectando a Google Sheets: {e}")
-        return pd.DataFrame()
+        return pd.DataFrame(), None, str(e)
 
-# Botón para forzar la actualización inmediata (limpia la caché)
-if st.button("🔄 Actualizar Datos Ahora", use_container_width=True):
-    st.cache_data.clear()
-    st.rerun()
-
-df = cargar_datos()
 
 # ==============================================================================
-# 4. VISUALIZACIÓN DE DATOS Y FILTROS
+# 4. VISUALIZACIÓN + DESCARGA EXCEL
 # ==============================================================================
-if not df.empty:
-    # Mostrar columnas disponibles para depuración (opcional, lo puedes comentar)
-    # st.write(f"📋 Columnas disponibles: {', '.join(df.columns.tolist())}")
+col_btn1, col_btn2 = st.columns([1, 3])
+with col_btn1:
+    if st.button("🔄 Actualizar resultados", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
 
-    # Convertir fecha a datetime si la columna existe
-    if 'fecha_scraping' in df.columns:
-        df['fecha_scraping'] = pd.to_datetime(df['fecha_scraping'], errors='coerce')
-        df = df.sort_values(by='fecha_scraping', ascending=False).reset_index(drop=True)
-    
-    # Métricas principales
+df, xlsx_raw, error_carga = cargar_ofertas_desde_artifact()
+
+if error_carga and df.empty:
+    st.warning(f"⚠️ {error_carga}")
+    st.info(
+        "Asegúrate de haber ejecutado el scraping al menos una vez y de que el workflow "
+        "suba el artifact `ofertas-excel`."
+    )
+elif df.empty:
+    st.info("📭 No hay datos en el último artifact. Ejecuta el pipeline y espera a que termine.")
+else:
+    if "fecha_scraping" in df.columns:
+        df["fecha_scraping"] = pd.to_datetime(df["fecha_scraping"], errors="coerce")
+        df = df.sort_values(by="fecha_scraping", ascending=False).reset_index(drop=True)
+
     col1, col2, col3 = st.columns(3)
     col1.metric("📈 Total Ofertas", len(df))
-    
-    if 'plataforma_origen' in df.columns:
-        col2.metric("🌐 Plataformas", df['plataforma_origen'].nunique())
+    if "plataforma_origen" in df.columns:
+        col2.metric("🌐 Plataformas", df["plataforma_origen"].nunique())
     else:
         col2.metric("🌐 Plataformas", "N/A")
-    
-    if 'fecha_scraping' in df.columns and not pd.isna(df['fecha_scraping'].max()):
-        col3.metric("🕒 Última Actualización", df['fecha_scraping'].max().strftime('%d/%m %H:%M'))
+    if "fecha_scraping" in df.columns and df["fecha_scraping"].notna().any():
+        col3.metric("🕒 Última fecha en datos", df["fecha_scraping"].max().strftime("%d/%m %H:%M"))
     else:
-        col3.metric("🕒 Última Actualización", "N/A")
-    
+        col3.metric("🕒 Última fecha en datos", "N/A")
+
     st.markdown("---")
-    
-    # FILTROS MEJORADOS
     st.subheader("🔍 Filtros")
-    
     col_f1, col_f2 = st.columns(2)
-    
+
     with col_f1:
-        if 'plataforma_origen' in df.columns:
+        if "plataforma_origen" in df.columns:
             plataformas = st.multiselect(
-                "Plataforma", 
-                options=df['plataforma_origen'].unique(), 
-                default=df['plataforma_origen'].unique()
+                "Plataforma",
+                options=list(df["plataforma_origen"].dropna().unique()),
+                default=list(df["plataforma_origen"].dropna().unique()),
             )
         else:
             plataformas = []
-    
+
     with col_f2:
-        if 'departamento' in df.columns:
+        if "departamento" in df.columns:
             departamentos = st.multiselect(
-                "Departamento", 
-                options=df['departamento'].unique(), 
-                default=df['departamento'].unique()
+                "Departamento",
+                options=list(df["departamento"].dropna().unique()),
+                default=list(df["departamento"].dropna().unique()),
             )
         else:
             departamentos = []
-    
-    # BARRA DE BÚSQUEDA EN TÍTULOS
+
     st.subheader("🔎 Buscar por Título de Puesto")
     busqueda_titulo = st.text_input(
         "Escribe palabras clave del puesto que buscas:",
         placeholder="Ej: marketing, datos, analista, desarrollador...",
-        help="Busca en todos los títulos de puesto. Separa con comas para buscar múltiples términos."
+        help="Separa con comas para varios términos (OR).",
     )
-    
-    # Aplicar filtros
+
     df_filtrado = df.copy()
-    
-    if 'plataforma_origen' in df.columns and plataformas:
-        df_filtrado = df_filtrado[df_filtrado['plataforma_origen'].isin(plataformas)]
-    
-    if 'departamento' in df.columns and departamentos:
-        df_filtrado = df_filtrado[df_filtrado['departamento'].isin(departamentos)]
-    
-    # Filtrar por búsqueda en títulos (lógica OR para múltiples términos)
-    if busqueda_titulo and 'titulo_puesto' in df.columns:
-        terminos = [t.strip().lower() for t in busqueda_titulo.split(',')]
+    if "plataforma_origen" in df_filtrado.columns and plataformas:
+        df_filtrado = df_filtrado[df_filtrado["plataforma_origen"].isin(plataformas)]
+    if "departamento" in df_filtrado.columns and departamentos:
+        df_filtrado = df_filtrado[df_filtrado["departamento"].isin(departamentos)]
+    if busqueda_titulo and "titulo_puesto" in df_filtrado.columns:
+        terminos = [t.strip().lower() for t in busqueda_titulo.split(",") if t.strip()]
         mask = pd.Series(False, index=df_filtrado.index)
         for termino in terminos:
-            mask = mask | df_filtrado['titulo_puesto'].str.lower().str.contains(termino, na=False)
+            mask = mask | df_filtrado["titulo_puesto"].astype(str).str.lower().str.contains(
+                termino, na=False
+            )
         df_filtrado = df_filtrado[mask]
-    
-    # Mostrar tabla
+
     st.subheader(f"📋 Listado de Ofertas ({len(df_filtrado)} resultados)")
-    
-    columnas_mostrar = ['fecha_scraping', 'plataforma_origen', 'titulo_puesto', 'empresa', 'departamento', 'modalidad', 'link_oferta']
-    columnas_existentes = [col for col in columnas_mostrar if col in df_filtrado.columns]
-    
+
+    columnas_mostrar = [
+        "fecha_scraping",
+        "plataforma_origen",
+        "titulo_puesto",
+        "empresa",
+        "departamento",
+        "modalidad",
+        "link_oferta",
+    ]
+    columnas_existentes = [c for c in columnas_mostrar if c in df_filtrado.columns]
+
     if columnas_existentes:
         st.dataframe(
             df_filtrado[columnas_existentes],
             use_container_width=True,
             hide_index=True,
             column_config={
-                "link_oferta": st.column_config.LinkColumn("Ver Oferta", display_text="🔗 Abrir") if 'link_oferta' in columnas_existentes else None
+                "link_oferta": st.column_config.LinkColumn("Ver Oferta", display_text="🔗 Abrir")
             }
-        )
-        
-        # Botón de descarga
-        csv = df_filtrado.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Descargar Ofertas Filtradas (CSV)",
-            data=csv,
-            file_name="ofertas_laborales.csv",
-            mime="text/csv"
+            if "link_oferta" in columnas_existentes
+            else None,
         )
     else:
-        st.warning("⚠️ No hay columnas estándar para mostrar. Mostrando todas las columnas disponibles:")
-        st.dataframe(df_filtrado, use_container_width=True)
-else:
-    st.info("📭 No hay datos disponibles aún. Asegúrate de haber ejecutado el pipeline al menos una vez desde GitHub Actions.")
+        st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
 
-# Footer
+    st.markdown("### 📥 Descargas")
+    c1, c2 = st.columns(2)
+
+    # Excel filtrado generado al vuelo
+    buf = io.BytesIO()
+    df_filtrado.to_excel(buf, index=False, engine="openpyxl")
+    buf.seek(0)
+    with c1:
+        st.download_button(
+            label="📥 Excel (vista filtrada)",
+            data=buf.getvalue(),
+            file_name=f"ofertas_filtradas_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+
+    # Excel completo de la última corrida (bytes del artifact)
+    with c2:
+        if xlsx_raw:
+            st.download_button(
+                label="📥 Excel completo (última corrida)",
+                data=xlsx_raw,
+                file_name="ofertas_latest.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+        else:
+            st.caption("Excel completo del artifact no disponible.")
+
 st.markdown("---")
-st.caption("Proyecto de Pasantía | Pipeline de Extracción de Ofertas Laborales con IA | Desplegado en Streamlit Community Cloud")
+st.caption(
+    "Proyecto de Pasantía | Pipeline de Extracción de Ofertas Laborales con IA | "
+    "Streamlit Community Cloud + GitHub Actions artifacts"
+)
