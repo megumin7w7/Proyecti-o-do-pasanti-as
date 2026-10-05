@@ -8,7 +8,7 @@ on:
 jobs:
   scrape-jobs:
     runs-on: ubuntu-22.04
-    
+
     steps:
       - name: 📥 Descargar el código del repositorio
         uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
       - name: 🌐 Instalar navegadores Playwright (Solo si no hay caché)
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: playwright install chromium
-        
+
       - name: ⚙️ Instalar dependencias del sistema operativo (Requerido siempre)
         run: playwright install-deps chromium
 
@@ -71,3 +71,17 @@ jobs:
             *.html
           retention-days: 3
           if-no-files-found: ignore
+
+      # ==========================================
+      # 🆕 NUEVO PASO: SUBIR EXCEL DE OFERTAS
+      # ==========================================
+      - name: 📁 Subir Excel de ofertas (artifact para Streamlit)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ofertas-excel
+          path: |
+            ofertas_latest.xlsx
+            ofertas_*.xlsx
+          retention-days: 14
+          if-no-files-found: warn
