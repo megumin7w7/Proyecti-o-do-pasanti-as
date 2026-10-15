@@ -39,7 +39,7 @@ WORKFLOW_FILE = "scraper.yml"  # nombre del archivo en .github/workflows/
 # 1) Sube loading.mp4 a tu repo en /assets/ y usa el raw de GitHub
 # 2) Cualquier URL directa a un .mp4 (CDN, Drive directo, etc.)
 CORNER_VIDEO_URL = (
-    "https://github.com/megumin7w7/Proyecti-o-do-pasanti-as/blob/main/assets/videoplayback.mp4"
+    "https://raw.githubusercontent.com/megumin7w7/Proyecti-o-do-pasanti-as/main/assets/videoplayback.mp4"
 )
 
 # Segundos entre cada recarga mientras el pipeline corre
