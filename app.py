@@ -134,40 +134,34 @@ def show_corner_video(video_url: str, status_label: str = "⏳ Pipeline en progr
         <style>
         #corner-video-label {{
             position: fixed;
-            bottom: 210px;
+            bottom: 250px;          /* antes 210 — sube el texto */
             right: 24px;
-            width: 260px;
+            width: 280px;           /* un poco más ancho */
             text-align: center;
             font-size: 11px;
             font-weight: 600;
             color: #22D3EE;
             z-index: 9999;
-            letter-spacing: 0.04em;
             pointer-events: none;
         }}
         #corner-video-container {{
             position: fixed;
             bottom: 24px;
             right: 24px;
-            width: 260px;
-            height: 180px;
+            width: 280px;           /* antes 260 */
+            height: 220px;          /* antes 180 — más alto */
             z-index: 9999;
             border-radius: 14px;
             overflow: hidden;
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
             border: 2px solid rgba(255,255,255,0.12);
             background: #000;
-            animation: slideIn 0.35s ease-out;
-        }}
-        @keyframes slideIn {{
-            from {{ opacity: 0; transform: translateY(16px) scale(0.96); }}
-            to {{ opacity: 1; transform: translateY(0) scale(1); }}
         }}
         </style>
         <div id="corner-video-label">{status_label}</div>
         <div id="corner-video-container">
             <video autoplay muted loop playsinline
-                   style="width:100%;height:100%;object-fit:cover;display:block;">
+                   style="width:100%;height:100%;object-fit:contain;display:block;background:#000;">
                 <source src="{video_url}" type="video/mp4">
             </video>
         </div>
