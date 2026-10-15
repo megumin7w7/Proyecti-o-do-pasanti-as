@@ -134,9 +134,9 @@ def show_corner_video(video_url: str, status_label: str = "⏳ Pipeline en progr
         <style>
         #corner-video-label {{
             position: fixed;
-            bottom: 250px;          /* antes 210 — sube el texto */
-            right: 24px;
-            width: 280px;           /* un poco más ancho */
+            bottom: 250px;
+            left: 16px;
+            width: 260px;
             text-align: center;
             font-size: 11px;
             font-weight: 600;
@@ -146,16 +146,22 @@ def show_corner_video(video_url: str, status_label: str = "⏳ Pipeline en progr
         }}
         #corner-video-container {{
             position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 280px;           /* antes 260 */
-            height: 280px;          /* antes 180 — más alto */
+            bottom: 16px;
+            left: 16px;
+            width: 260px;
+            height: 260px;
             z-index: 9999;
             border-radius: 14px;
             overflow: hidden;
             box-shadow: 0 8px 32px rgba(0,0,0,0.5);
             border: 2px solid rgba(255,255,255,0.12);
             background: #000;
+        }}
+        /* En pantallas chicas, que no tape tanto */
+        @media (max-width: 768px) {{
+            #corner-video-container, #corner-video-label {{
+                display: none !important;
+            }}
         }}
         </style>
         <div id="corner-video-label">{status_label}</div>
