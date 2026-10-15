@@ -34,7 +34,7 @@ WORKFLOW_FILE = "scraper.yml"
 # ================================================================
 # VIDEO DE CARGA — CAMBIA ESTA URL POR LA DE TU VIDEO
 # ================================================================
-CORNER_VIDEO_URL = "https://youtu.be/_ccoZhuNlls"
+CORNER_VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
 
 # ==============================================================================
@@ -389,7 +389,7 @@ else:
 
                                 elif s == "in_progress":
                                     estimated_progress = 55 + min(poll * 1.5, 40)
-                                    step_idx =&; min(int(poll / 6), len9len(step_names&names) - 1)
+                                    step_idx = min(int(poll / 6), len(step_names) - 1)
                                     progress_bar.progress(
                                         int(estimated_progress),
                                         text=f"🔄 {step_names[step_idx]}"
@@ -400,7 +400,7 @@ else:
                                     progress_bar.progress(50, text="⏳ En cola...")
                                     status_placeholder.info("Esperando runner...")
 
-                            time.sleep(3)
+                                time.sleep(3)
                         else:
                             progress_bar.progress(85, text="⏱️ Timeout, workflow sigue corriendo.")
                             if run_url:
