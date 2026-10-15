@@ -149,7 +149,7 @@ def show_corner_video(video_url: str, status_label: str = "⏳ Pipeline en progr
             bottom: 24px;
             right: 24px;
             width: 280px;           /* antes 260 */
-            height: 220px;          /* antes 180 — más alto */
+            height: 280px;          /* antes 180 — más alto */
             z-index: 9999;
             border-radius: 14px;
             overflow: hidden;
