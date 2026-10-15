@@ -2,8 +2,8 @@
 Módulo: app.py (Dashboard Visual Estable)
 - Config de búsquedas: Google Sheets (Config_Busquedas)
 - Resultados: artifact Excel de GitHub Actions
-- Descarga: Excel generado al vuelo en Streamlit
-- Feedback visual: pantalla de carga + video en esquina + polling de estado
+- Descarga: Excel al vuelo en Streamlit
+- Feedback: video MP4 en esquina + auto-refresh mientras corre el workflow
 Desplegado en: Streamlit Community Cloud
 """
 import streamlit as st
@@ -26,20 +26,31 @@ st.markdown(
     "este dashboard configura búsquedas y permite descargar los resultados."
 )
 
+# =============================================================================
+# ⚙️ CONFIGURACIÓN — AJUSTA ESTOS VALORES
+# =============================================================================
 REPO_OWNER = "megumin7w7"
 REPO_NAME = "Proyecti-o-do-pasanti-as"
 ARTIFACT_NAME = "ofertas-excel"
-WORKFLOW_FILE = "scraper.yml"
+WORKFLOW_FILE = "scraper.yml"  # nombre del archivo en .github/workflows/
 
-# ================================================================
-# VIDEO DE CARGA — CAMBIA ESTA URL POR LA DE TU VIDEO
-# ================================================================
-CORNER_VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+# Video de carga: DEBE ser un MP4 público (no YouTube).
+# Opciones:
+# 1) Sube loading.mp4 a tu repo en /assets/ y usa el raw de GitHub
+# 2) Cualquier URL directa a un .mp4 (CDN, Drive directo, etc.)
+CORNER_VIDEO_URL = (
+    "https://github.com/megumin7w7/Proyecti-o-do-pasanti-as/blob/main/assets/videoplayback.mp4"
+)
 
+# Segundos entre cada recarga mientras el pipeline corre
+POLL_SECONDS = 6
 
-# ==============================================================================
-# 1. AUTENTICACIÓN GOOGLE SHEETS
-# ==============================================================================
+# Nombre del Google Sheet de configuración
+SHEET_NAME = "Laboral_AI_Scraper_Data"
+
+# =============================================================================
+# 1. AUTENTICACIÓN
+# =============================================================================
 @st.cache_resource
 def get_sheets_client():
     try:
@@ -71,18 +82,16 @@ def _github_headers():
     }
 
 
-# ==============================================================================
-# 2. FUNCIONES DE ESTADO DEL WORKFLOW
-# ==============================================================================
-def get_latest_workflow_run(headers, status_filter=None):
-    """Obtiene la última run del workflow scraper."""
+# =============================================================================
+# 2. ESTADO DEL WORKFLOW
+# =============================================================================
+def get_latest_workflow_run(headers):
+    """Última run del workflow scraper (cualquier estado)."""
     try:
         url = (
             f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/actions/runs"
-            f"?per_page=10"
+            f"?per_page=15"
         )
-        if status_filter:
-            url += f"&status={status_filter}"
         r = requests.get(url, headers=headers, timeout=15)
         r.raise_for_status()
         runs = r.json().get("workflow_runs", [])
@@ -91,114 +100,105 @@ def get_latest_workflow_run(headers, status_filter=None):
             name = (run.get("name") or "").lower()
             if "scraper" in path or "scraper" in name or "scraping" in name:
                 return run
-        return None
+        return runs[0] if runs else None
     except Exception:
         return None
 
 
 def get_workflow_status_display(run):
-    """Convierte estado de run en texto + emoji."""
     if not run:
         return "❓ Desconocido", "unknown"
     status = run.get("status", "unknown")
-    conclusion = run.get("conclusion", "")
+    conclusion = run.get("conclusion") or ""
     if status == "queued":
         return "⏳ En cola...", "queued"
-    elif status == "in_progress":
+    if status == "in_progress":
         return "🔄 Ejecutando scraping...", "running"
-    elif status == "completed":
+    if status == "completed":
         if conclusion == "success":
             return "✅ Completado exitosamente", "success"
-        elif conclusion == "failure":
+        if conclusion == "failure":
             return "❌ Falló la ejecución", "failed"
-        elif conclusion == "cancelled":
+        if conclusion == "cancelled":
             return "🚫 Cancelado", "cancelled"
-        else:
-            return f"⚠️ Completado: {conclusion}", "other"
-    else:
-        return f"📌 Estado: {status}", "other"
+        return f"⚠️ Completado: {conclusion}", "other"
+    return f"📌 Estado: {status}", "other"
 
 
-# ==============================================================================
-# 3. VIDEO EN ESQUINA INFERIOR DERECHA
-# ==============================================================================
-def show_corner_video(video_url):
-    """Muestra video pequeño fijo en esquina inferior derecha."""
-    is_youtube = "youtube.com" in video_url or "youtu.be" in video_url
-
-    if is_youtube:
-        if "youtu.be" in video_url:
-            yt_id = video_url.split("/")[-1].split("?")[0]
-        else:
-            yt_id = video_url.split("v=")[-1].split("&")[0]
-        video_html = f"""
-        <iframe
-            src="https://www.youtube.com/embed/{yt_id}?autoplay=1&mute=1&loop=1&playlist={yt_id}&controls=0"
-            style="width:100%;height:100%;border:none;border-radius:12px;"
-            allow="autoplay; muted"
-        ></iframe>
-        """
-    else:
-        video_html = f"""
-        <video autoplay muted loop playsinline
-            style="width:100%;height:100%;object-fit:cover;border-radius:12px;">
-            <source src="{video_url}" type="video/mp4">
-        </video>
-        """
-
+# =============================================================================
+# 3. VIDEO EN ESQUINA (solo MP4 — sin UI de YouTube)
+# =============================================================================
+def show_corner_video(video_url: str, status_label: str = "⏳ Pipeline en progreso"):
     st.markdown(
         f"""
         <style>
-            #corner-video-container {{
-                position: fixed;
-                bottom: 24px;
-                right: 24px;
-                width: 260px;
-                height: 180px;
-                z-index: 9999;
-                border-radius: 14px;
-                overflow: hidden;
-                box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-                border: 2px solid rgba(255,255,255,0.15);
-                background: #000;
-                animation: slideIn 0.4s ease-out;
-            }}
-            #corner-video-container::before {{
-                content: "⏳ Pipeline en progreso";
-                position: absolute;
-                top: -28px;
-                left: 0;
-                right: 0;
-                text-align: center;
-                font-size: 11px;
-                font-weight: 600;
-                color: #22D3EE;
-                letter-spacing: 0.05em;
-            }}
-            @keyframes slideIn {{
-                from {{ opacity: 0; transform: translateY(20px) scale(0.95); }}
-                to {{ opacity: 1; transform: translateY(0) scale(1); }}
-            }}
+        #corner-video-label {{
+            position: fixed;
+            bottom: 210px;
+            right: 24px;
+            width: 260px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: #22D3EE;
+            z-index: 9999;
+            letter-spacing: 0.04em;
+            pointer-events: none;
+        }}
+        #corner-video-container {{
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 260px;
+            height: 180px;
+            z-index: 9999;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            border: 2px solid rgba(255,255,255,0.12);
+            background: #000;
+            animation: slideIn 0.35s ease-out;
+        }}
+        @keyframes slideIn {{
+            from {{ opacity: 0; transform: translateY(16px) scale(0.96); }}
+            to {{ opacity: 1; transform: translateY(0) scale(1); }}
+        }}
         </style>
+        <div id="corner-video-label">{status_label}</div>
         <div id="corner-video-container">
-            {video_html}
+            <video autoplay muted loop playsinline
+                   style="width:100%;height:100%;object-fit:cover;display:block;">
+                <source src="{video_url}" type="video/mp4">
+            </video>
         </div>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
 
 def hide_corner_video():
-    """Oculta el video de la esquina."""
     st.markdown(
-        """<style>#corner-video-container{display:none !important;}</style>""",
-        unsafe_allow_html=True
+        """
+        <style>
+        #corner-video-container, #corner-video-label {
+            display: none !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
 
 
-# ==============================================================================
-# 4. SIDEBAR: BÚSQUEDAS + DISPARO DE ACTIONS CON FEEDBACK
-# ==============================================================================
+# =============================================================================
+# 4. SESSION STATE
+# =============================================================================
+if "pipeline_pending" not in st.session_state:
+    st.session_state.pipeline_pending = False
+
+
+# =============================================================================
+# 5. SIDEBAR — BÚSQUEDAS + DISPARO
+# =============================================================================
 st.sidebar.header("⚙️ Control del Pipeline")
 
 with st.sidebar.expander("➕ Agregar Nueva Búsqueda", expanded=False):
@@ -214,13 +214,19 @@ with st.sidebar.expander("➕ Agregar Nueva Búsqueda", expanded=False):
             client = get_sheets_client()
             if client:
                 try:
-                    sheet = client.open("Laboral_AI_Scraper_Data")
+                    sheet = client.open(SHEET_NAME)
                     try:
                         config_sheet = sheet.worksheet("Config_Busquedas")
                     except gspread.WorksheetNotFound:
-                        config_sheet = sheet.add_worksheet(title="Config_Busquedas", rows="100", cols="4")
-                        config_sheet.append_row(["Puesto", "Lugar", "Activo", "Ultima_Ejecucion"])
-                    config_sheet.append_row([nuevo_puesto.strip(), nuevo_lugar.strip(), "SI", "-"])
+                        config_sheet = sheet.add_worksheet(
+                            title="Config_Busquedas", rows="100", cols="4"
+                        )
+                        config_sheet.append_row(
+                            ["Puesto", "Lugar", "Activo", "Ultima_Ejecucion"]
+                        )
+                    config_sheet.append_row(
+                        [nuevo_puesto.strip(), nuevo_lugar.strip(), "SI", "-"]
+                    )
                     st.success(f"✅ Búsqueda agregada: '{nuevo_puesto}' en '{nuevo_lugar}'")
                     st.rerun()
                 except Exception as e:
@@ -232,7 +238,7 @@ with st.sidebar.expander("📋 Búsquedas Activas", expanded=True):
     client = get_sheets_client()
     if client:
         try:
-            sheet = client.open("Laboral_AI_Scraper_Data")
+            sheet = client.open(SHEET_NAME)
             try:
                 config_sheet = sheet.worksheet("Config_Busquedas")
                 busquedas_data = config_sheet.get_all_records()
@@ -253,8 +259,7 @@ with st.sidebar.expander("📋 Búsquedas Activas", expanded=True):
                                     with col_b:
                                         if st.button("🗑️", key=f"del_{idx}"):
                                             try:
-                                                fila_sheet = idx + 2
-                                                config_sheet.update_cell(fila_sheet, 3, "NO")
+                                                config_sheet.update_cell(idx + 2, 3, "NO")
                                                 st.success("✅ Eliminada")
                                                 st.rerun()
                                             except Exception as e:
@@ -270,169 +275,98 @@ with st.sidebar.expander("📋 Búsquedas Activas", expanded=True):
     else:
         st.sidebar.error("No se pudo conectar a Google Sheets. Verifica tus secretos.")
 
-# --- Verificar estado actual del workflow ---
+# --- Estado actual del workflow ---
 headers = _github_headers()
 workflow_is_running = False
 workflow_status_text = ""
 workflow_run_url = ""
+status_key = "unknown"
 
 if headers:
     latest_run = get_latest_workflow_run(headers)
     if latest_run:
-        status_display, status_key = get_workflow_status_display(latest_run)
-        workflow_status_text = status_display
+        workflow_status_text, status_key = get_workflow_status_display(latest_run)
         workflow_run_url = latest_run.get("html_url", "")
         if status_key in ("queued", "running"):
             workflow_is_running = True
+            st.session_state.pipeline_pending = True
+        elif status_key in ("success", "failed", "cancelled", "other"):
+            # Terminó: soltar flag de “pendiente”
+            if st.session_state.pipeline_pending:
+                st.session_state.pipeline_pending = False
 
-# --- Mostrar estado actual del workflow en sidebar ---
 if workflow_status_text:
     if workflow_is_running:
         st.sidebar.warning(f"**{workflow_status_text}**")
         if workflow_run_url:
             st.sidebar.markdown(f"[👀 Ver progreso en GitHub]({workflow_run_url})")
-    elif "exitosamente" in workflow_status_text:
+    elif status_key == "success":
         st.sidebar.success(f"**{workflow_status_text}**")
-    elif "Falló" in workflow_status_text:
+    elif status_key == "failed":
         st.sidebar.error(f"**{workflow_status_text}**")
     else:
         st.sidebar.info(f"**{workflow_status_text}**")
 
-# --- Botón de ejecutar con feedback completo ---
-if workflow_is_running:
+# --- Botón ejecutar (sin bucle de 30 intentos) ---
+pipeline_activo = workflow_is_running or st.session_state.pipeline_pending
+
+if pipeline_activo:
     st.sidebar.button(
         "🚀 Scraping en progreso...",
         type="primary",
         use_container_width=True,
         disabled=True,
     )
-    st.sidebar.caption("⏳ Espera a que termine el workflow actual.")
-    show_corner_video(CORNER_VIDEO_URL)
+    st.sidebar.caption(f"⏳ Estado se actualiza cada ~{POLL_SECONDS}s")
+    show_corner_video(CORNER_VIDEO_URL, workflow_status_text or "⏳ Pipeline en progreso")
 else:
+    hide_corner_video()
     if st.sidebar.button(
         "🚀 Ejecutar Scraping en Segundo Plano",
         type="primary",
         use_container_width=True,
     ):
-        show_corner_video(CORNER_VIDEO_URL)
-
-        placeholder = st.sidebar.empty()
-
-        with placeholder.container():
-            st.markdown("### 🔄 Iniciando pipeline...")
-            progress_bar = st.progress(0, text="Enviando orden a GitHub Actions...")
-
-            github_token = st.secrets.get("GITHUB_TOKEN", os.environ.get("GITHUB_TOKEN"))
-            if not github_token:
-                progress_bar.empty()
-                hide_corner_video()
-                st.error("❌ Falta GITHUB_TOKEN en secrets de Streamlit.")
-            else:
-                url = (
-                    f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
-                    f"/actions/workflows/{WORKFLOW_FILE}/dispatches"
+        github_token = st.secrets.get("GITHUB_TOKEN") or os.environ.get("GITHUB_TOKEN")
+        if not github_token:
+            st.sidebar.error("❌ Falta GITHUB_TOKEN en secrets de Streamlit.")
+        else:
+            url = (
+                f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
+                f"/actions/workflows/{WORKFLOW_FILE}/dispatches"
+            )
+            gh_headers = {
+                "Authorization": f"Bearer {github_token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            }
+            try:
+                response = requests.post(
+                    url, headers=gh_headers, json={"ref": "main"}, timeout=30
                 )
-                gh_headers = {
-                    "Authorization": f"Bearer {github_token}",
-                    "Accept": "application/vnd.github+json",
-                    "X-GitHub-Api-Version": "2022-11-28",
-                }
+            except Exception as e:
+                st.sidebar.error(f"❌ Error de conexión: {e}")
+                response = None
 
-                try:
-                    response = requests.post(url, headers=gh_headers, json={"ref": "main"}, timeout=30)
-                except Exception as e:
-                    progress_bar.empty()
-                    hide_corner_video()
-                    st.error(f"❌ Error de conexión: {e}")
-                    response = None
-
-                if response and response.status_code == 204:
-                    progress_bar.progress(20, text="✅ Orden enviada. Buscando workflow...")
-                    time.sleep(3)
-
-                    progress_bar.progress(40, text="🔍 Detectando ejecución...")
-                    new_run = None
-                    for attempt in range(6):
-                        new_run = get_latest_workflow_run(gh_headers)
-                        if new_run and new_run.get("status") in ("queued", "in_progress"):
-                            break
-                        time.sleep(2)
-
-                    if new_run:
-                        run_url = new_run.get("html_url", "")
-                        progress_bar.progress(50, text="⏳ Workflow encontrado. Monitoreando...")
-
-                        status_placeholder = st.empty()
-                        step_names = [
-                            "Clonando repositorio...",
-                            "Instalando dependencias...",
-                            "Ejecutando scrapers...",
-                            "Procesando con NLP...",
-                            "Subiendo resultados...",
-                        ]
-
-                        for poll in range(30):
-                            run_check = get_latest_workflow_run(gh_headers)
-                            if run_check:
-                                s = run_check.get("status", "")
-                                c = run_check.get("conclusion", "")
-
-                                if s == "completed":
-                                    if c == "success":
-                                        progress_bar.progress(100, text="✅ ¡Scraping completado!")
-                                        status_placeholder.success("🎉 Resultados disponibles en 1-2 minutos.")
-                                    else:
-                                        progress_bar.progress(100, text=f"⚠️ Workflow: {c}")
-                                        status_placeholder.warning(f"Estado: {c}")
-                                    hide_corner_video()
-                                    break
-
-                                elif s == "in_progress":
-                                    estimated_progress = 55 + min(poll * 1.5, 40)
-                                    step_idx = min(int(poll / 6), len(step_names) - 1)
-                                    progress_bar.progress(
-                                        int(estimated_progress),
-                                        text=f"🔄 {step_names[step_idx]}"
-                                    )
-                                    status_placeholder.info(f"⏱️ Monitoreando... (intento {poll + 1}/30)")
-
-                                elif s == "queued":
-                                    progress_bar.progress(50, text="⏳ En cola...")
-                                    status_placeholder.info("Esperando runner...")
-
-                                time.sleep(3)
-                        else:
-                            progress_bar.progress(85, text="⏱️ Timeout, workflow sigue corriendo.")
-                            if run_url:
-                                st.info(f"📍 [Ver progreso en GitHub]({run_url})")
-                            st.caption("Vuelve en unos minutos y pulsa 'Actualizar resultados'.")
-
-                    else:
-                        progress_bar.progress(60, text="⚠️ Run no detectada, orden enviada.")
-                        st.info("Pulsa 'Actualizar resultados' cuando termine.")
-
-                elif response:
-                    progress_bar.empty()
-                    hide_corner_video()
-                    st.error(f"❌ Error: {response.status_code} - {response.text}")
-
-                time.sleep(2)
-                placeholder.empty()
+            if response is not None and response.status_code == 204:
+                st.session_state.pipeline_pending = True
+                st.sidebar.success("✅ Orden enviada a GitHub Actions")
+                time.sleep(1)
                 st.rerun()
+            elif response is not None:
+                st.sidebar.error(f"❌ Error: {response.status_code} — {response.text}")
 
 st.sidebar.markdown("---")
 st.sidebar.info(
-    "💡 Las búsquedas viven en Google Sheets (Config_Busquedas). "
-    "Los resultados salen del Excel de la última corrida de Actions."
+    "💡 Búsquedas → Google Sheets (Config_Busquedas). "
+    "Resultados → Excel de la última corrida de Actions."
 )
 
 
-# ==============================================================================
-# 5. CARGA DESDE ARTIFACT DE GITHUB ACTIONS
-# ==============================================================================
+# =============================================================================
+# 6. CARGA DESDE ARTIFACT
+# =============================================================================
 @st.cache_data(ttl=120)
 def cargar_ofertas_desde_artifact():
-    """Descarga el artifact 'ofertas-excel' de la última run exitosa."""
     headers = _github_headers()
     if not headers:
         return pd.DataFrame(), None, "Falta GITHUB_TOKEN en secrets."
@@ -466,15 +400,18 @@ def cargar_ofertas_desde_artifact():
         r.raise_for_status()
         artifacts = r.json().get("artifacts", [])
         art = next(
-            (a for a in artifacts if a.get("name") == ARTIFACT_NAME and not a.get("expired")),
+            (
+                a
+                for a in artifacts
+                if a.get("name") == ARTIFACT_NAME and not a.get("expired")
+            ),
             None,
         )
         if not art:
             return (
                 pd.DataFrame(),
                 None,
-                f"No se encontró artifact '{ARTIFACT_NAME}' en la run {run_id}. "
-                "¿Ya corrió el pipeline con el paso de upload-artifact?",
+                f"No se encontró artifact '{ARTIFACT_NAME}' en la run {run_id}.",
             )
 
         dl = requests.get(art["archive_download_url"], headers=headers, timeout=120)
@@ -494,15 +431,14 @@ def cargar_ofertas_desde_artifact():
 
         df = pd.read_excel(io.BytesIO(xlsx_bytes), engine="openpyxl")
         return df, xlsx_bytes, None
-
     except Exception as e:
         return pd.DataFrame(), None, str(e)
 
 
-# ==============================================================================
-# 6. VISUALIZACIÓN + DESCARGA EXCEL
-# ==============================================================================
-col_btn1, col_btn2 = st.columns([1, 3])
+# =============================================================================
+# 7. VISUALIZACIÓN + DESCARGA
+# =============================================================================
+col_btn1, _ = st.columns([1, 3])
 with col_btn1:
     if st.button("🔄 Actualizar resultados", use_container_width=True):
         st.cache_data.clear()
@@ -513,7 +449,7 @@ df, xlsx_raw, error_carga = cargar_ofertas_desde_artifact()
 if error_carga and df.empty:
     st.warning(f"⚠️ {error_carga}")
     st.info(
-        "Asegúrate de haber ejecutado el scraping al menos una vez y de que el workflow "
+        "Ejecuta el scraping al menos una vez y asegúrate de que el workflow "
         "suba el artifact `ofertas-excel`."
     )
 elif df.empty:
@@ -530,7 +466,10 @@ else:
     else:
         col2.metric("🌐 Plataformas", "N/A")
     if "fecha_scraping" in df.columns and df["fecha_scraping"].notna().any():
-        col3.metric("🕒 Última fecha en datos", df["fecha_scraping"].max().strftime("%d/%m %H:%M"))
+        col3.metric(
+            "🕒 Última fecha en datos",
+            df["fecha_scraping"].max().strftime("%d/%m %H:%M"),
+        )
     else:
         col3.metric("🕒 Última fecha en datos", "N/A")
 
@@ -580,7 +519,6 @@ else:
         df_filtrado = df_filtrado[mask]
 
     st.subheader(f"📋 Listado de Ofertas ({len(df_filtrado)} resultados)")
-
     columnas_mostrar = [
         "fecha_scraping",
         "plataforma_origen",
@@ -597,11 +535,15 @@ else:
             df_filtrado[columnas_existentes],
             use_container_width=True,
             hide_index=True,
-            column_config={
-                "link_oferta": st.column_config.LinkColumn("Ver Oferta", display_text="🔗 Abrir")
-            }
-            if "link_oferta" in columnas_existentes
-            else None,
+            column_config=(
+                {
+                    "link_oferta": st.column_config.LinkColumn(
+                        "Ver Oferta", display_text="🔗 Abrir"
+                    )
+                }
+                if "link_oferta" in columnas_existentes
+                else None
+            ),
         )
     else:
         st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
@@ -620,7 +562,6 @@ else:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
         )
-
     with c2:
         if xlsx_raw:
             st.download_button(
@@ -638,3 +579,10 @@ st.caption(
     "Proyecto de Pasantía | Pipeline de Extracción de Ofertas Laborales con IA | "
     "Streamlit Community Cloud + GitHub Actions artifacts"
 )
+
+# =============================================================================
+# 8. AUTO-REFRESH mientras el pipeline está activo
+# =============================================================================
+if pipeline_activo:
+    time.sleep(POLL_SECONDS)
+    st.rerun()
