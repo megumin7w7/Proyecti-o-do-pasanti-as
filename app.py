@@ -133,31 +133,32 @@ def show_corner_video(video_url: str, status_label: str = "⏳ Pipeline en progr
         f"""
         <style>
         #corner-video-label {{
-            position: fixed;
-            bottom: 250px;
-            left: 16px;
-            width: 260px;
-            text-align: center;
-            font-size: 11px;
-            font-weight: 600;
-            color: #22D3EE;
-            z-index: 9999;
-            pointer-events: none;
+            position: fixed !important;
+            bottom: 250px !important;
+            left: 16px !important;
+            right: auto !important;
+            width: 260px !important;
+            text-align: center !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            color: #22D3EE !important;
+            z-index: 99999 !important;
+            pointer-events: none !important;
         }}
         #corner-video-container {{
-            position: fixed;
-            bottom: 16px;
-            left: 16px;
-            width: 260px;
-            height: 260px;
-            z-index: 9999;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-            border: 2px solid rgba(255,255,255,0.12);
-            background: #000;
+            position: fixed !important;
+            bottom: 16px !important;
+            left: 16px !important;
+            right: auto !important;
+            width: 260px !important;
+            height: 260px !important;
+            z-index: 99999 !important;
+            border-radius: 14px !important;
+            overflow: hidden !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+            border: 2px solid rgba(255,255,255,0.12) !important;
+            background: #000 !important;
         }}
-        /* En pantallas chicas, que no tape tanto */
         @media (max-width: 768px) {{
             #corner-video-container, #corner-video-label {{
                 display: none !important;
